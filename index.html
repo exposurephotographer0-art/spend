@@ -986,23 +986,35 @@
     <div id="page-forecast" class="page">
       <div class="section-header">
         <div class="section-title">Monthly Forecast</div>
-        <button class="btn btn-primary btn-sm" onclick="openModal('forecast-modal')">+ Add</button>
+        <button class="btn btn-primary btn-sm" onclick="openForecastAdd()">+ Add</button>
       </div>
 
       <div id="forecast-summary-row" class="stat-row"></div>
 
-      <div class="card">
-        <div class="card-title">Projected vs Actual (This Month)</div>
+      <div class="card" style="margin-bottom:1rem">
+        <div class="card-title">Projected vs Actual</div>
         <div class="chart-wrap">
           <canvas id="forecast-chart"></canvas>
         </div>
       </div>
 
-      <div class="tabs">
-        <button class="tab-btn active" onclick="switchForecastTab('all',this)">All</button>
-        <button class="tab-btn" onclick="switchForecastTab('Henry',this)">Henry</button>
-        <button class="tab-btn" onclick="switchForecastTab('Ash',this)">Ash</button>
-        <button class="tab-btn" onclick="switchForecastTab('joint',this)">Joint</button>
+      <!-- Category tabs - scrollable -->
+      <div class="bottom-nav" style="position:relative;border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:1rem;padding-bottom:0">
+        <button class="nav-item active" onclick="switchForecastCat('all',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>All
+        </button>
+        <button class="nav-item" onclick="switchForecastCat('Car',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">🚗<br>Car</button>
+        <button class="nav-item" onclick="switchForecastCat('Bills',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">💡<br>Bills</button>
+        <button class="nav-item" onclick="switchForecastCat('Mortgage',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">🏠<br>Mortgage</button>
+        <button class="nav-item" onclick="switchForecastCat('Groceries',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">🛒<br>Food</button>
+        <button class="nav-item" onclick="switchForecastCat('Hobbies',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">🎮<br>Hobbies</button>
+        <button class="nav-item" onclick="switchForecastCat('Sports',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">⚽<br>Sports</button>
+        <button class="nav-item" onclick="switchForecastCat('Social',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">🥂<br>Social</button>
+        <button class="nav-item" onclick="switchForecastCat('Entertainment',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">🎬<br>Media</button>
+        <button class="nav-item" onclick="switchForecastCat('Shopping',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">🛍️<br>Shopping</button>
+        <button class="nav-item" onclick="switchForecastCat('Health',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">💊<br>Health</button>
+        <button class="nav-item" onclick="switchForecastCat('Travel',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">✈️<br>Travel</button>
+        <button class="nav-item" onclick="switchForecastCat('Other',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">📦<br>Other</button>
       </div>
 
       <div id="forecast-list"></div>
@@ -1046,50 +1058,68 @@
 <!-- TOAST -->
 <div id="toast"></div>
 
-<!-- Forecast Modal -->
+<!-- Forecast Add/Edit Modal -->
 <div id="forecast-modal" class="modal-overlay">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">Add Projected Cost</div>
+      <div class="modal-title" id="fc-modal-title">Add Cost</div>
       <button class="close-btn" onclick="closeModal('forecast-modal')">×</button>
     </div>
     <div class="form-grid">
       <div class="form-group form-col-2">
         <label class="form-label">Description</label>
-        <input type="text" id="fc-name" placeholder="e.g. Netflix, Car Insurance">
+        <input type="text" id="fc-name" placeholder="e.g. Petrol, Netflix">
       </div>
       <div class="form-group">
         <label class="form-label">Category</label>
-        <select id="fc-category"></select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Assigned To</label>
-        <select id="fc-owner">
-          <option value="Henry">Henry</option>
-          <option value="Ash">Ash</option>
-          <option value="joint">Joint</option>
+        <select id="fc-category">
+          <option value="Car">🚗 Car</option>
+          <option value="Bills">💡 Bills</option>
+          <option value="Mortgage">🏠 Mortgage</option>
+          <option value="Groceries">🛒 Groceries</option>
+          <option value="Hobbies">🎮 Hobbies</option>
+          <option value="Sports">⚽ Sports</option>
+          <option value="Social">🥂 Social</option>
+          <option value="Entertainment">🎬 Entertainment</option>
+          <option value="Shopping">🛍️ Shopping</option>
+          <option value="Health">💊 Health</option>
+          <option value="Travel">✈️ Travel</option>
+          <option value="Eating Out">🍽️ Eating Out</option>
+          <option value="Childcare">👶 Childcare</option>
+          <option value="Pets">🐾 Pets</option>
+          <option value="Other">📦 Other</option>
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Monthly Amount (£)</label>
+        <label class="form-label">Person</label>
+        <select id="fc-owner">
+          <option value="Henry">Henry</option>
+          <option value="Ash">Ash</option>
+          <option value="Joint">Joint</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount (£)</label>
         <input type="number" id="fc-amount" placeholder="0.00" step="0.01" min="0">
       </div>
       <div class="form-group">
         <label class="form-label">Frequency</label>
         <select id="fc-frequency">
-          <option value="monthly">Monthly</option>
-          <option value="annual">Annual (÷12)</option>
-          <option value="quarterly">Quarterly (÷3)</option>
-          <option value="weekly">Weekly (×4.33)</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly" selected>Monthly</option>
+          <option value="quarterly">Quarterly</option>
+          <option value="annual">Annual</option>
         </select>
       </div>
       <div class="form-group form-col-2">
-        <label class="form-label">Notes</label>
-        <input type="text" id="fc-notes" placeholder="Optional">
+        <label class="form-label">Notes (optional)</label>
+        <input type="text" id="fc-notes" placeholder="e.g. renewal date, provider">
       </div>
     </div>
+    <input type="hidden" id="fc-edit-id" value="">
     <div style="margin-top:1rem;display:flex;gap:0.5rem">
       <button class="btn btn-primary" onclick="submitForecast()">Save</button>
+      <button class="btn btn-ghost" onclick="closeModal('forecast-modal')">Cancel</button>
     </div>
   </div>
 </div>
@@ -1382,7 +1412,7 @@ async function showApp() {
   await ensureDefaultAccounts();
   await Promise.all([loadDashboard(), loadMortgage(), loadSalaries()]);
   // Pre-load forecast items from localStorage
-  forecastItems = loadForecastFromStorage();
+  const _stored = loadForecastFromStorage(); if (_stored) forecastItems = _stored;
 }
 
 async function ensureDefaultAccounts() {
@@ -2198,81 +2228,169 @@ function renderAccountsSplitChart() {
 }
 
 // ─── FORECAST PAGE ─────────────────────────────────────────────────────────────
-let forecastItems = [];
-let forecastTab = 'all';
 
-const FORECAST_STORAGE_KEY = 'ha_forecast_v1';
+// Pre-populated default forecast items. These are the smart defaults.
+// id < 0 = default (can be edited/deleted). id > 0 = user-added.
+const FORECAST_DEFAULTS = [
+  // ── CAR ──
+  { id:-1,  name:'Petrol',         category:'Car',           owner:'Henry', amount:60,    frequency:'weekly',    notes:'Fill-up' },
+  { id:-2,  name:'Petrol',         category:'Car',           owner:'Ash',   amount:40,    frequency:'weekly',    notes:'Fill-up' },
+  { id:-3,  name:'Car Insurance',  category:'Car',           owner:'Henry', amount:600,   frequency:'annual',    notes:'Renews annually' },
+  { id:-4,  name:'Car Insurance',  category:'Car',           owner:'Ash',   amount:500,   frequency:'annual',    notes:'Renews annually' },
+  { id:-5,  name:'Car Tax (VED)',  category:'Car',           owner:'Henry', amount:180,   frequency:'annual',    notes:'' },
+  { id:-6,  name:'Car Tax (VED)',  category:'Car',           owner:'Ash',   amount:180,   frequency:'annual',    notes:'' },
+  { id:-7,  name:'MOT',            category:'Car',           owner:'Henry', amount:55,    frequency:'annual',    notes:'' },
+  { id:-8,  name:'MOT',            category:'Car',           owner:'Ash',   amount:55,    frequency:'annual',    notes:'' },
+  { id:-9,  name:'Servicing',      category:'Car',           owner:'Henry', amount:250,   frequency:'annual',    notes:'Full service' },
+  { id:-10, name:'Servicing',      category:'Car',           owner:'Ash',   amount:250,   frequency:'annual',    notes:'Full service' },
+  { id:-11, name:'Repairs fund',   category:'Car',           owner:'Joint', amount:30,    frequency:'monthly',   notes:'Contingency' },
+  { id:-12, name:'Parking',        category:'Car',           owner:'Henry', amount:40,    frequency:'monthly',   notes:'' },
+  // ── BILLS ──
+  { id:-20, name:'Gas & Electric', category:'Bills',         owner:'Joint', amount:150,   frequency:'monthly',   notes:'Direct debit' },
+  { id:-21, name:'Water',          category:'Bills',         owner:'Joint', amount:45,    frequency:'monthly',   notes:'' },
+  { id:-22, name:'Council Tax',    category:'Bills',         owner:'Joint', amount:180,   frequency:'monthly',   notes:'10 months' },
+  { id:-23, name:'Broadband',      category:'Bills',         owner:'Joint', amount:35,    frequency:'monthly',   notes:'' },
+  { id:-24, name:'Mobile – Henry', category:'Bills',         owner:'Henry', amount:30,    frequency:'monthly',   notes:'' },
+  { id:-25, name:'Mobile – Ash',   category:'Bills',         owner:'Ash',   amount:30,    frequency:'monthly',   notes:'' },
+  { id:-26, name:'TV Licence',     category:'Bills',         owner:'Joint', amount:169.50,frequency:'annual',    notes:'Apr renewal' },
+  { id:-27, name:'Home Insurance', category:'Bills',         owner:'Joint', amount:300,   frequency:'annual',    notes:'' },
+  { id:-28, name:'Life Insurance', category:'Bills',         owner:'Henry', amount:25,    frequency:'monthly',   notes:'' },
+  { id:-29, name:'Life Insurance', category:'Bills',         owner:'Ash',   amount:20,    frequency:'monthly',   notes:'' },
+  // ── MORTGAGE ──
+  { id:-40, name:'Mortgage',       category:'Mortgage',      owner:'Joint', amount:0,     frequency:'monthly',   notes:'See mortgage tab' },
+  // ── GROCERIES ──
+  { id:-50, name:'Weekly shop',    category:'Groceries',     owner:'Joint', amount:120,   frequency:'weekly',    notes:'' },
+  { id:-51, name:'Toiletries',     category:'Groceries',     owner:'Joint', amount:30,    frequency:'monthly',   notes:'' },
+  // ── ENTERTAINMENT / MEDIA ──
+  { id:-60, name:'Netflix',        category:'Entertainment', owner:'Joint', amount:17.99, frequency:'monthly',   notes:'' },
+  { id:-61, name:'Spotify',        category:'Entertainment', owner:'Henry', amount:10.99, frequency:'monthly',   notes:'' },
+  { id:-62, name:'Disney+',        category:'Entertainment', owner:'Joint', amount:4.99,  frequency:'monthly',   notes:'' },
+  { id:-63, name:'Amazon Prime',   category:'Entertainment', owner:'Joint', amount:95,    frequency:'annual',    notes:'' },
+  { id:-64, name:'Apple TV+',      category:'Entertainment', owner:'Joint', amount:8.99,  frequency:'monthly',   notes:'' },
+  // ── SPORTS ──
+  { id:-70, name:'Gym – Henry',    category:'Sports',        owner:'Henry', amount:40,    frequency:'monthly',   notes:'' },
+  { id:-71, name:'Gym – Ash',      category:'Sports',        owner:'Ash',   amount:40,    frequency:'monthly',   notes:'' },
+  // ── HOBBIES ──
+  { id:-80, name:'Hobbies – Henry',category:'Hobbies',       owner:'Henry', amount:50,    frequency:'monthly',   notes:'' },
+  { id:-81, name:'Hobbies – Ash',  category:'Hobbies',       owner:'Ash',   amount:50,    frequency:'monthly',   notes:'' },
+  // ── SOCIAL ──
+  { id:-90, name:'Eating out',     category:'Social',        owner:'Joint', amount:150,   frequency:'monthly',   notes:'' },
+  { id:-91, name:'Drinks / nights out', category:'Social',  owner:'Joint', amount:100,   frequency:'monthly',   notes:'' },
+  // ── HEALTH ──
+  { id:-100,name:'Dentist',        category:'Health',        owner:'Henry', amount:80,    frequency:'annual',    notes:'' },
+  { id:-101,name:'Dentist',        category:'Health',        owner:'Ash',   amount:80,    frequency:'annual',    notes:'' },
+  { id:-102,name:'Prescriptions',  category:'Health',        owner:'Joint', amount:10,    frequency:'monthly',   notes:'NHS prepayment' },
+  // ── SHOPPING ──
+  { id:-110,name:'Clothes – Henry',category:'Shopping',      owner:'Henry', amount:50,    frequency:'monthly',   notes:'' },
+  { id:-111,name:'Clothes – Ash',  category:'Shopping',      owner:'Ash',   amount:50,    frequency:'monthly',   notes:'' },
+  // ── TRAVEL ──
+  { id:-120,name:'Train / transport',category:'Travel',      owner:'Henry', amount:60,    frequency:'monthly',   notes:'' },
+  { id:-121,name:'Holidays fund',  category:'Travel',        owner:'Joint', amount:200,   frequency:'monthly',   notes:'Savings pot' },
+];
+
+const FORECAST_STORAGE_KEY = 'ha_forecast_v2';
+let forecastItems = [];      // user overrides / additions
+let forecastCat = 'all';     // which category tab is active
+let forecastActual = {};     // this month's actual spend
 
 function loadForecastFromStorage() {
   try {
     const raw = localStorage.getItem(FORECAST_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
 }
 
-function saveForecastToStorage(items) {
-  localStorage.setItem(FORECAST_STORAGE_KEY, JSON.stringify(items));
+function saveForecastToStorage() {
+  localStorage.setItem(FORECAST_STORAGE_KEY, JSON.stringify(forecastItems));
 }
 
-async function loadForecast() {
-  forecastItems = loadForecastFromStorage();
-
-  // Populate category select
-  document.getElementById('fc-category').innerHTML =
-    ['Car','Hobbies','Bills','Social','Entertainment','Eating Out','Shopping','Mortgage','Sports','Health','Travel','Subscriptions','Childcare','Insurance','Other']
-    .map(c => `<option value="${c}">${CAT_MAP[c] || '📦'} ${c}</option>`).join('');
-
-  // Get this month's actual spending for comparison
-  const month = new Date().toISOString().slice(0, 7);
-  const stats = await api(`/api/stats?month=${month}`) || {};
-  const actual = {};
-  (stats.byCategory || []).filter(r => r.type === 'expense').forEach(r => {
-    actual[r.category] = (actual[r.category] || 0) + r.total;
-  });
-
-  renderForecastSummary(actual);
-  renderForecastChart(actual);
-  renderForecastList(actual);
+// Returns merged list: defaults overridden by any user edits, plus user additions
+function getMergedForecast() {
+  const overrides = {};
+  forecastItems.forEach(i => { overrides[i.id] = i; });
+  const deleted = new Set(forecastItems.filter(i => i._deleted).map(i => i.id));
+  const defaults = FORECAST_DEFAULTS
+    .filter(d => !deleted.has(d.id))
+    .map(d => overrides[d.id] ? { ...d, ...overrides[d.id] } : d);
+  const additions = forecastItems.filter(i => i.id > 0 && !i._deleted);
+  return [...defaults, ...additions];
 }
 
 function toMonthly(amount, frequency) {
-  if (frequency === 'annual') return amount / 12;
+  if (frequency === 'annual')    return amount / 12;
   if (frequency === 'quarterly') return amount / 3;
-  if (frequency === 'weekly') return amount * 4.33;
-  return amount; // monthly
+  if (frequency === 'weekly')    return amount * 4.33;
+  return amount;
 }
 
-function renderForecastSummary(actual) {
-  const visible = forecastItems.filter(i => forecastTab === 'all' || i.owner === forecastTab);
-  const projected = visible.reduce((s, i) => s + toMonthly(i.amount, i.frequency), 0);
-  const totalActual = Object.values(actual).reduce((s, v) => s + v, 0);
+function freqLabel(f) {
+  return { weekly:'weekly', monthly:'monthly', quarterly:'quarterly', annual:'yearly' }[f] || f;
+}
+
+async function loadForecast() {
+  const stored = loadForecastFromStorage();
+  if (stored) forecastItems = stored;
+
+  const month = new Date().toISOString().slice(0, 7);
+  const stats = await api(`/api/stats?month=${month}`) || {};
+  forecastActual = {};
+  (stats.byCategory || []).filter(r => r.type === 'expense').forEach(r => {
+    forecastActual[r.category] = (forecastActual[r.category] || 0) + r.total;
+  });
+
+  renderForecastSummary();
+  renderForecastChart();
+  renderForecastList();
+}
+
+function switchForecastCat(cat, btn) {
+  forecastCat = cat;
+  btn.closest('.bottom-nav').querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderForecastList();
+}
+
+function renderForecastSummary() {
+  const all = getMergedForecast();
+  const projected = all.reduce((s, i) => s + toMonthly(i.amount, i.frequency), 0);
+  const totalActual = Object.values(forecastActual).reduce((s, v) => s + v, 0);
   const diff = projected - totalActual;
+  const henryProj = all.filter(i => i.owner === 'Henry').reduce((s,i) => s + toMonthly(i.amount,i.frequency), 0);
+  const ashProj   = all.filter(i => i.owner === 'Ash').reduce((s,i) => s + toMonthly(i.amount,i.frequency), 0);
+  const jointProj = all.filter(i => i.owner === 'Joint').reduce((s,i) => s + toMonthly(i.amount,i.frequency), 0);
 
   document.getElementById('forecast-summary-row').innerHTML = `
-    <div class="stat-chip">
-      <div class="stat-label">Projected</div>
+    <div class="stat-chip" style="flex:1 1 100px">
+      <div class="stat-label">Total projected/mo</div>
       <div class="stat-value">${fmt(projected)}</div>
     </div>
-    <div class="stat-chip">
-      <div class="stat-label">Actual (this month)</div>
+    <div class="stat-chip" style="flex:1 1 100px">
+      <div class="stat-label">Actual this month</div>
       <div class="stat-value">${fmt(totalActual)}</div>
     </div>
-    <div class="stat-chip">
-      <div class="stat-label">${diff >= 0 ? 'Over by' : 'Under by'}</div>
+    <div class="stat-chip" style="flex:1 1 100px">
+      <div class="stat-label">${diff >= 0 ? '▲ Over budget' : '▼ Under budget'}</div>
       <div class="stat-value ${diff >= 0 ? 'negative' : 'positive'}">${fmt(Math.abs(diff))}</div>
+    </div>
+    <div class="stat-chip" style="flex:1 1 80px;border-top:2px solid var(--henry)">
+      <div class="stat-label">Henry</div>
+      <div class="stat-value" style="color:var(--henry)">${fmt(henryProj)}</div>
+    </div>
+    <div class="stat-chip" style="flex:1 1 80px;border-top:2px solid var(--ash)">
+      <div class="stat-label">Ash</div>
+      <div class="stat-value" style="color:var(--ash)">${fmt(ashProj)}</div>
+    </div>
+    <div class="stat-chip" style="flex:1 1 80px;border-top:2px solid var(--accent)">
+      <div class="stat-label">Joint</div>
+      <div class="stat-value" style="color:var(--accent)">${fmt(jointProj)}</div>
     </div>`;
 }
 
-function renderForecastChart(actual) {
-  // Group forecast by category
-  const projByCat = {};
-  forecastItems.forEach(i => {
-    projByCat[i.category] = (projByCat[i.category] || 0) + toMonthly(i.amount, i.frequency);
-  });
-
-  const allCats = [...new Set([...Object.keys(projByCat), ...Object.keys(actual)])];
-  const projected = allCats.map(c => projByCat[c] || 0);
-  const actuals = allCats.map(c => actual[c] || 0);
+function renderForecastChart() {
+  const all = getMergedForecast();
+  const cats = [...new Set(all.map(i => i.category))];
+  const projected = cats.map(c => all.filter(i=>i.category===c).reduce((s,i)=>s+toMonthly(i.amount,i.frequency),0));
+  const actuals   = cats.map(c => forecastActual[c] || 0);
 
   if (charts.forecast) charts.forecast.destroy();
   const ctx = document.getElementById('forecast-chart')?.getContext('2d');
@@ -2280,113 +2398,172 @@ function renderForecastChart(actual) {
   charts.forecast = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: allCats,
+      labels: cats,
       datasets: [
-        { label: 'Projected', data: projected, backgroundColor: 'rgba(200,169,110,0.6)', borderRadius: 4 },
-        { label: 'Actual', data: actuals, backgroundColor: 'rgba(126,184,212,0.6)', borderRadius: 4 },
+        { label: 'Projected', data: projected, backgroundColor: 'rgba(200,169,110,0.7)', borderRadius: 5 },
+        { label: 'Actual',    data: actuals,   backgroundColor: 'rgba(126,184,212,0.7)', borderRadius: 5 },
       ]
     },
     options: {
       ...chartOpts(),
       plugins: {
         ...chartOpts().plugins,
-        legend: { display: true, labels: { color: '#9a9590', font: { size: 11 }, boxWidth: 12 } }
+        legend: { display: true, labels: { color: '#9a9590', font: { size: 11 }, boxWidth: 10 } }
       }
     }
   });
 }
 
-function renderForecastList(actual) {
-  const visible = forecastTab === 'all'
-    ? forecastItems
-    : forecastItems.filter(i => i.owner === forecastTab);
-
+function renderForecastList() {
+  const all = getMergedForecast();
+  const visible = forecastCat === 'all' ? all : all.filter(i => i.category === forecastCat);
   const el = document.getElementById('forecast-list');
-  if (!visible.length) {
-    el.innerHTML = '<div class="loading">No projected costs yet. Tap + Add to get started.</div>';
+
+  // Group by category
+  const byCat = {};
+  visible.forEach(i => { (byCat[i.category] = byCat[i.category] || []).push(i); });
+
+  if (!Object.keys(byCat).length) {
+    el.innerHTML = '<div class="loading">No items in this category</div>';
     return;
   }
 
-  // Group by category
-  const byCategory = {};
-  visible.forEach(item => {
-    if (!byCategory[item.category]) byCategory[item.category] = [];
-    byCategory[item.category].push(item);
-  });
+  el.innerHTML = Object.entries(byCat).map(([cat, items]) => {
+    const catProj   = items.reduce((s,i) => s + toMonthly(i.amount, i.frequency), 0);
+    const catActual = forecastActual[cat] || 0;
+    const pct       = catProj > 0 ? Math.min((catActual / catProj) * 100, 100) : 0;
+    const over      = catActual > catProj;
+    const barCol    = over ? 'var(--danger)' : pct > 80 ? '#f0c080' : 'var(--accent3)';
 
-  el.innerHTML = Object.entries(byCategory).map(([cat, items]) => {
-    const catTotal = items.reduce((s, i) => s + toMonthly(i.amount, i.frequency), 0);
-    const actualSpend = actual[cat] || 0;
-    const pct = catTotal > 0 ? Math.min((actualSpend / catTotal) * 100, 100) : 0;
-    const over = actualSpend > catTotal;
-    const barColor = over ? 'var(--danger)' : pct > 80 ? '#f0c080' : 'var(--accent3)';
+    // Group by person within category
+    const byOwner = {};
+    items.forEach(i => { (byOwner[i.owner] = byOwner[i.owner] || []).push(i); });
+    const ownerOrder = ['Henry', 'Ash', 'Joint'];
 
     return `<div class="card" style="margin-bottom:0.8rem">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
-        <div style="font-weight:600;font-size:0.92rem">${CAT_MAP[cat] || '📦'} ${cat}</div>
-        <div style="font-family:'DM Mono',monospace;font-size:0.82rem;color:${barColor}">${fmt(actualSpend)} / ${fmt(catTotal)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+        <div style="font-weight:600;font-size:1rem">${CAT_MAP[cat] || '📦'} ${cat}</div>
+        <div style="text-align:right">
+          <div style="font-family:'DM Mono',monospace;font-size:0.82rem;color:${barCol}">${fmt(catActual)} <span style="color:var(--text3)">/ ${fmt(catProj)}</span></div>
+          <div style="font-size:0.7rem;color:var(--text3)">actual / projected</div>
+        </div>
       </div>
-      <div class="progress-bar" style="margin-bottom:0.8rem">
-        <div class="progress-fill" style="width:${pct}%;background:${barColor}"></div>
+      <div class="progress-bar" style="margin-bottom:1rem">
+        <div class="progress-fill" style="width:${pct}%;background:${barCol}"></div>
       </div>
-      ${items.map(item => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0;border-top:1px solid var(--border)">
-          <div>
-            <div style="font-size:0.85rem;color:var(--text)">${item.name}</div>
-            <div style="font-size:0.72rem;color:var(--text3);margin-top:0.1rem">
-              ${item.owner} · ${item.frequency}${item.notes ? ' · ' + item.notes : ''}
-            </div>
+      ${ownerOrder.filter(o => byOwner[o]).map(owner => {
+        const ownerItems = byOwner[owner];
+        const ownerTotal = ownerItems.reduce((s,i) => s + toMonthly(i.amount, i.frequency), 0);
+        const ownerCol = owner === 'Henry' ? 'var(--henry)' : owner === 'Ash' ? 'var(--ash)' : 'var(--accent)';
+        return `<div style="margin-bottom:0.5rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0.5rem;background:var(--surface3);border-radius:6px;margin-bottom:0.3rem">
+            <span style="font-size:0.75rem;font-weight:600;color:${ownerCol}">${owner}</span>
+            <span style="font-family:'DM Mono',monospace;font-size:0.8rem;color:${ownerCol}">${fmt(ownerTotal)}/mo</span>
           </div>
-          <div style="display:flex;align-items:center;gap:0.6rem">
-            <div style="text-align:right">
-              <div style="font-family:'DM Mono',monospace;font-size:0.88rem;color:var(--accent)">${fmt(toMonthly(item.amount, item.frequency))}<span style="font-size:0.7rem;color:var(--text3)">/mo</span></div>
-              ${item.frequency !== 'monthly' ? `<div style="font-size:0.72rem;color:var(--text3)">${fmt(item.amount)} ${item.frequency}</div>` : ''}
-            </div>
-            <button onclick="deleteForecastItem(${item.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:1rem;padding:0.2rem">🗑</button>
-          </div>
-        </div>`).join('')}
+          ${ownerItems.map(item => {
+            const monthly = toMonthly(item.amount, item.frequency);
+            const isDefault = item.id < 0;
+            return `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.45rem 0.5rem;border-bottom:1px solid var(--border)">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:0.85rem;color:var(--text);display:flex;align-items:center;gap:0.4rem">
+                  ${item.name}
+                  ${isDefault ? '<span style="font-size:0.65rem;color:var(--text3);background:var(--surface3);padding:0.1rem 0.35rem;border-radius:10px">default</span>' : '<span style="font-size:0.65rem;color:var(--accent);background:rgba(200,169,110,0.1);padding:0.1rem 0.35rem;border-radius:10px">custom</span>'}
+                </div>
+                <div style="font-size:0.7rem;color:var(--text3);margin-top:0.1rem">
+                  ${freqLabel(item.frequency)}${item.frequency !== 'monthly' ? ' · ' + fmt(item.amount) + ' ' + freqLabel(item.frequency) : ''}${item.notes ? ' · ' + item.notes : ''}
+                </div>
+              </div>
+              <div style="text-align:right;flex-shrink:0">
+                <div style="font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--accent)">${fmt(monthly)}<span style="font-size:0.68rem;color:var(--text3)">/mo</span></div>
+              </div>
+              <div style="display:flex;gap:0.2rem;flex-shrink:0">
+                <button onclick="editForecastItem(${item.id})" style="background:var(--surface3);border:none;color:var(--text2);cursor:pointer;width:26px;height:26px;border-radius:6px;font-size:0.8rem">✏️</button>
+                <button onclick="deleteForecastItem(${item.id})" style="background:var(--surface3);border:none;color:var(--danger);cursor:pointer;width:26px;height:26px;border-radius:6px;font-size:0.8rem">×</button>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`;
+      }).join('')}
+      <button onclick="openForecastAdd('${cat}')" style="width:100%;margin-top:0.5rem;background:none;border:1px dashed var(--border);color:var(--text3);border-radius:8px;padding:0.4rem;font-size:0.8rem;cursor:pointer">+ add to ${cat}</button>
     </div>`;
   }).join('');
 }
 
-function switchForecastTab(tab, btn) {
-  forecastTab = tab;
-  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  loadForecast();
-}
-
-async function submitForecast() {
-  const name = document.getElementById('fc-name').value.trim();
-  const amount = parseFloat(document.getElementById('fc-amount').value);
-  if (!name) { toast('Enter a description', true); return; }
-  if (!amount || amount <= 0) { toast('Enter a valid amount', true); return; }
-
-  const item = {
-    id: Date.now(),
-    name,
-    category: document.getElementById('fc-category').value,
-    owner: document.getElementById('fc-owner').value,
-    amount,
-    frequency: document.getElementById('fc-frequency').value,
-    notes: document.getElementById('fc-notes').value.trim(),
-  };
-
-  forecastItems.push(item);
-  saveForecastToStorage(forecastItems);
-  closeModal('forecast-modal');
-  toast('Forecast item added ✓');
+function openForecastAdd(presetCat) {
+  document.getElementById('fc-modal-title').textContent = 'Add Cost';
+  document.getElementById('fc-edit-id').value = '';
   document.getElementById('fc-name').value = '';
   document.getElementById('fc-amount').value = '';
   document.getElementById('fc-notes').value = '';
+  document.getElementById('fc-frequency').value = 'monthly';
+  document.getElementById('fc-owner').value = 'Joint';
+  if (presetCat && presetCat !== 'all') {
+    document.getElementById('fc-category').value = presetCat;
+  }
+  openModal('forecast-modal');
+}
+
+function editForecastItem(id) {
+  // Find item in merged list
+  const all = getMergedForecast();
+  const item = all.find(i => i.id === id);
+  if (!item) return;
+  document.getElementById('fc-modal-title').textContent = 'Edit Cost';
+  document.getElementById('fc-edit-id').value = id;
+  document.getElementById('fc-name').value = item.name;
+  document.getElementById('fc-amount').value = item.amount;
+  document.getElementById('fc-notes').value = item.notes || '';
+  document.getElementById('fc-frequency').value = item.frequency;
+  document.getElementById('fc-owner').value = item.owner;
+  document.getElementById('fc-category').value = item.category;
+  openModal('forecast-modal');
+}
+
+function submitForecast() {
+  const name   = document.getElementById('fc-name').value.trim();
+  const amount = parseFloat(document.getElementById('fc-amount').value);
+  const editId = document.getElementById('fc-edit-id').value;
+
+  if (!name)            { toast('Enter a description', true); return; }
+  if (!amount || amount <= 0) { toast('Enter a valid amount', true); return; }
+
+  const data = {
+    name,
+    category:  document.getElementById('fc-category').value,
+    owner:     document.getElementById('fc-owner').value,
+    amount,
+    frequency: document.getElementById('fc-frequency').value,
+    notes:     document.getElementById('fc-notes').value.trim(),
+  };
+
+  if (editId !== '') {
+    const numId = parseInt(editId);
+    // Remove any existing override for this id, then add updated one
+    forecastItems = forecastItems.filter(i => i.id !== numId);
+    forecastItems.push({ id: numId, ...data });
+  } else {
+    forecastItems.push({ id: Date.now(), ...data });
+  }
+
+  saveForecastToStorage();
+  closeModal('forecast-modal');
+  toast(editId !== '' ? 'Updated ✓' : 'Added ✓');
   loadForecast();
 }
 
 function deleteForecastItem(id) {
-  forecastItems = forecastItems.filter(i => i.id !== id);
-  saveForecastToStorage(forecastItems);
+  if (id < 0) {
+    // Mark default as deleted
+    forecastItems = forecastItems.filter(i => i.id !== id);
+    forecastItems.push({ id, _deleted: true });
+  } else {
+    forecastItems = forecastItems.filter(i => i.id !== id);
+  }
+  saveForecastToStorage();
   toast('Removed');
-  loadForecast();
+  renderForecastList();
+  renderForecastSummary();
+  renderForecastChart();
 }
 
 // ─── AUTO-LOGIN ─────────────────────────────────────────────────────────────
