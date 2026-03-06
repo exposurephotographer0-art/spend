@@ -2623,7 +2623,7 @@ function editForecastItem(id) {
   openModal('forecast-modal');
 }
 
-function submitForecast() {
+async function submitForecast() {
   const name   = document.getElementById('fc-name').value.trim();
   const amount = parseFloat(document.getElementById('fc-amount').value);
   const editId = document.getElementById('fc-edit-id').value;
