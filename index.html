@@ -890,10 +890,16 @@
       </div>
 
       <div class="card">
-        <div class="card-title">Amortisation Schedule</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem">
+          <div class="card-title" style="margin:0">Amortisation Schedule</div>
+          <div style="display:flex;background:var(--surface2);border-radius:8px;padding:3px;gap:3px">
+            <button class="tab-btn active" id="amort-btn-yearly" onclick="switchAmortView('yearly',this)" style="padding:0.3rem 0.7rem;font-size:0.75rem">Yearly</button>
+            <button class="tab-btn" id="amort-btn-monthly" onclick="switchAmortView('monthly',this)" style="padding:0.3rem 0.7rem;font-size:0.75rem">Monthly</button>
+          </div>
+        </div>
         <div class="table-wrap">
           <table id="amort-table">
-            <thead>
+            <thead id="amort-head">
               <tr><th>Year</th><th>Balance</th><th>Paid</th><th>Interest</th><th>Equity</th></tr>
             </thead>
             <tbody id="amort-body"></tbody>
@@ -1122,16 +1128,37 @@
       </div>
       <div class="form-group">
         <label class="form-label">Frequency</label>
-        <select id="fc-frequency">
+        <select id="fc-frequency" onchange="toggleFcDateField()">
           <option value="weekly">Weekly</option>
           <option value="monthly" selected>Monthly</option>
           <option value="quarterly">Quarterly</option>
           <option value="annual">Annual</option>
         </select>
       </div>
+      <div class="form-group" id="fc-day-group" style="">
+        <label class="form-label">Payment Day</label>
+        <select id="fc-day">
+          <option value="">Any day</option>
+          <option value="1">1st</option><option value="2">2nd</option><option value="3">3rd</option>
+          <option value="4">4th</option><option value="5">5th</option><option value="6">6th</option>
+          <option value="7">7th</option><option value="8">8th</option><option value="9">9th</option>
+          <option value="10">10th</option><option value="11">11th</option><option value="12">12th</option>
+          <option value="13">13th</option><option value="14">14th</option><option value="15">15th</option>
+          <option value="16">16th</option><option value="17">17th</option><option value="18">18th</option>
+          <option value="19">19th</option><option value="20">20th</option><option value="21">21st</option>
+          <option value="22">22nd</option><option value="23">23rd</option><option value="24">24th</option>
+          <option value="25">25th</option><option value="26">26th</option><option value="27">27th</option>
+          <option value="28">28th</option><option value="29">29th</option><option value="30">30th</option>
+          <option value="31">31st</option>
+        </select>
+      </div>
+      <div class="form-group" id="fc-annual-date-group" style="display:none">
+        <label class="form-label">Annual Date</label>
+        <input type="text" id="fc-annual-date" placeholder="e.g. 15 Apr">
+      </div>
       <div class="form-group form-col-2">
         <label class="form-label">Notes (optional)</label>
-        <input type="text" id="fc-notes" placeholder="e.g. renewal date, provider">
+        <input type="text" id="fc-notes" placeholder="e.g. provider, account">
       </div>
     </div>
     <input type="hidden" id="fc-edit-id" value="">
@@ -1185,6 +1212,31 @@
       <div class="form-group form-col-2">
         <label class="form-label">Date</label>
         <input type="date" id="tx-date">
+      </div>
+      <div class="form-group form-col-2">
+        <label class="form-label" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+          <input type="checkbox" id="tx-recurring" onchange="toggleTxRecurring()" style="width:16px;height:16px;accent-color:var(--accent)">
+          Recurring payment
+        </label>
+      </div>
+      <div id="tx-recurring-fields" style="display:none;grid-column:1/-1">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Repeat</label>
+            <select id="tx-recur-freq">
+              <option value="weekly">Weekly</option>
+              <option value="monthly" selected>Monthly</option>
+              <option value="annual">Annually</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">End date (optional)</label>
+            <input type="date" id="tx-recur-end" placeholder="Leave blank = ongoing">
+          </div>
+        </div>
+        <div style="margin-top:0.5rem;padding:0.6rem 0.8rem;background:var(--surface3);border-radius:8px;font-size:0.78rem;color:var(--text2)">
+          ℹ️ Saves this transaction and auto-creates the next occurrence. You can delete individual entries from the transactions list.
+        </div>
       </div>
     </div>
     <div style="margin-top:1rem">
@@ -1453,6 +1505,12 @@ async function showApp() {
   ]);
   if (savedPct) _savingsPct = savedPct;
   await loadForecastFromDB().catch(e => console.warn('loadForecast:', e));
+  // Restore last active tab from URL hash
+  const hashPage = window.location.hash.replace('#','');
+  const validPages = ['dashboard','transactions','budgets','mortgage','salary','accounts','forecast'];
+  if (hashPage && validPages.includes(hashPage)) {
+    showPage(hashPage);
+  }
 }
 
 async function ensureDefaultAccounts() {
@@ -1489,16 +1547,19 @@ function populateAccountSelect() {
 
 // ─── NAVIGATION ────────────────────────────────────────────────────────────
 function showPage(name) {
+  const pages = ['dashboard','transactions','budgets','mortgage','salary','accounts','forecast'];
+  if (!pages.includes(name)) name = 'dashboard';
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById(`page-${name}`).classList.add('active');
   const navBtns = document.querySelectorAll('.nav-item');
-  const pages = ['dashboard','transactions','budgets','mortgage','salary','accounts','forecast'];
   const idx = pages.indexOf(name);
   if (idx >= 0) {
     navBtns[idx]?.classList.add('active');
     navBtns[idx]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }
+  // Persist tab in URL hash so refresh restores position
+  history.replaceState(null, '', `#${name}`);
   if (name === 'transactions') loadTransactions();
   if (name === 'budgets') loadBudgets();
   if (name === 'mortgage') renderMortgage();
@@ -1652,6 +1713,7 @@ function txHTML(tx, showDelete = false) {
         <span>${tx.category}</span>
         <span>·</span>
         <span>${formatDate(tx.date)}</span>
+        ${tx.is_recurring ? `<span>·</span><span style="color:var(--accent);font-size:0.68rem">🔁 ${tx.recur_freq || 'recurring'}</span>` : ''}
       </div>
     </div>
     <div>
@@ -1678,22 +1740,53 @@ function setTxType(type, btn) {
 async function submitTransaction() {
   const amount = parseFloat(document.getElementById('tx-amount').value);
   if (!amount || amount <= 0) { toast('Enter a valid amount', true); return; }
+  const isRecurring = document.getElementById('tx-recurring').checked;
+  const recurFreq = document.getElementById('tx-recur-freq').value;
+  const recurEnd = document.getElementById('tx-recur-end').value;
+  const baseDate = document.getElementById('tx-date').value;
+
   const data = {
     type: currentTxType,
     owner: document.getElementById('tx-owner').value,
     amount,
     category: document.getElementById('tx-category').value,
     description: document.getElementById('tx-desc').value,
-    date: document.getElementById('tx-date').value,
+    date: baseDate,
     account_id: document.getElementById('tx-account').value || null,
+    is_recurring: isRecurring ? 1 : 0,
+    recur_freq: isRecurring ? recurFreq : null,
+    recur_end: isRecurring ? (recurEnd || null) : null,
   };
+
+  // Save the transaction for the entered date
   await api('/api/transactions', 'POST', data);
+
+  // If recurring, also pre-create the next occurrence (without account debit - just as a reminder entry)
+  if (isRecurring) {
+    const nextDate = getNextRecurDate(baseDate, recurFreq);
+    const endOk = !recurEnd || nextDate <= recurEnd;
+    if (endOk) {
+      const nextData = { ...data, date: nextDate, account_id: null }; // next one doesn't auto-debit
+      await api('/api/transactions', 'POST', nextData);
+    }
+  }
+
   closeModal('add-tx-modal');
-  toast('Transaction added ✓');
+  toast(isRecurring ? 'Transaction + next occurrence saved ✓' : 'Transaction added ✓');
   document.getElementById('tx-amount').value = '';
   document.getElementById('tx-desc').value = '';
+  document.getElementById('tx-recurring').checked = false;
+  toggleTxRecurring();
   loadDashboard();
   if (document.getElementById('page-transactions').classList.contains('active')) loadTransactions();
+}
+
+function getNextRecurDate(dateStr, freq) {
+  const d = new Date(dateStr);
+  if (freq === 'weekly')  d.setDate(d.getDate() + 7);
+  if (freq === 'monthly') d.setMonth(d.getMonth() + 1);
+  if (freq === 'annual')  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().slice(0, 10);
 }
 
 // ─── BUDGETS ───────────────────────────────────────────────────────────────
@@ -1926,22 +2019,67 @@ function renderMortgageChart(schedule, m) {
   });
 }
 
+let _amortSchedule = [];
+let _amortCurrentMonth = 0;
+let _amortView = 'yearly';
+
 function renderAmortTable(schedule, currentMonth) {
-  const yearly = [];
-  for (let yr = 1; yr <= Math.ceil(schedule.length / 12); yr++) {
-    const row = schedule[Math.min(yr * 12 - 1, schedule.length - 1)];
-    if (row) yearly.push({ year: yr, ...row });
+  _amortSchedule = schedule;
+  _amortCurrentMonth = currentMonth;
+  _renderAmort();
+}
+
+function switchAmortView(view, btn) {
+  _amortView = view;
+  document.getElementById('amort-btn-yearly').classList.toggle('active', view === 'yearly');
+  document.getElementById('amort-btn-monthly').classList.toggle('active', view === 'monthly');
+  _renderAmort();
+}
+
+function _renderAmort() {
+  const schedule = _amortSchedule;
+  const currentMonth = _amortCurrentMonth;
+  if (!schedule.length) return;
+
+  if (_amortView === 'monthly') {
+    document.getElementById('amort-head').innerHTML =
+      '<tr><th>Month</th><th>Date</th><th>Balance</th><th>Principal</th><th>Interest</th></tr>';
+    document.getElementById('amort-body').innerHTML = schedule.map((r, i) => {
+      const isNow = (i + 1) === currentMonth;
+      const d = new Date(r.date + '-01');
+      const label = d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+      return `<tr class="${isNow ? 'highlight' : ''}">
+        <td>${i + 1}${isNow ? ' ←' : ''}</td>
+        <td>${label}</td>
+        <td>${fmt(r.balance)}</td>
+        <td>${fmt(r.principal)}</td>
+        <td>${fmt(r.interest)}</td>
+      </tr>`;
+    }).join('');
+    // Scroll to current month after render
+    setTimeout(() => {
+      const highlighted = document.querySelector('#amort-body .highlight');
+      if (highlighted) highlighted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  } else {
+    document.getElementById('amort-head').innerHTML =
+      '<tr><th>Year</th><th>Balance</th><th>Paid</th><th>Interest</th><th>Equity</th></tr>';
+    const yearly = [];
+    for (let yr = 1; yr <= Math.ceil(schedule.length / 12); yr++) {
+      const row = schedule[Math.min(yr * 12 - 1, schedule.length - 1)];
+      if (row) yearly.push({ year: yr, ...row });
+    }
+    document.getElementById('amort-body').innerHTML = yearly.map(r => {
+      const isNow = Math.ceil(currentMonth / 12) === r.year;
+      return `<tr class="${isNow ? 'highlight' : ''}">
+        <td>Yr ${r.year}${isNow ? ' ←' : ''}</td>
+        <td>${fmt(r.balance)}</td>
+        <td>${fmt(r.totalPaid)}</td>
+        <td>${fmt(r.interest)}</td>
+        <td>${fmt(r.principal)}</td>
+      </tr>`;
+    }).join('');
   }
-  document.getElementById('amort-body').innerHTML = yearly.map(r => {
-    const isNow = Math.ceil(currentMonth / 12) === r.year;
-    return `<tr class="${isNow ? 'highlight' : ''}">
-      <td>Yr ${r.year}${isNow ? ' ←' : ''}</td>
-      <td>${fmt(r.balance)}</td>
-      <td>${fmt(r.totalPaid)}</td>
-      <td>${fmt(r.interest)}</td>
-      <td>${fmt(r.principal)}</td>
-    </tr>`;
-  }).join('');
 }
 
 function renderOverpayments(ops) {
@@ -2425,6 +2563,11 @@ function freqLabel(f) {
   return { weekly:'weekly', monthly:'monthly', quarterly:'quarterly', annual:'yearly' }[f] || f;
 }
 
+function ordinal(n) {
+  const s = ['th','st','nd','rd'], v = n % 100;
+  return s[(v - 20) % 10] || s[v] || s[0];
+}
+
 async function loadForecast() {
   await loadForecastFromDB();
 
@@ -2574,7 +2717,7 @@ function renderForecastList() {
                   ${isDefault ? '<span style="font-size:0.65rem;color:var(--text3);background:var(--surface3);padding:0.1rem 0.35rem;border-radius:10px">default</span>' : '<span style="font-size:0.65rem;color:var(--accent);background:rgba(200,169,110,0.1);padding:0.1rem 0.35rem;border-radius:10px">custom</span>'}
                 </div>
                 <div style="font-size:0.7rem;color:var(--text3);margin-top:0.1rem">
-                  ${freqLabel(item.frequency)}${item.frequency !== 'monthly' ? ' · ' + fmt(item.amount) + ' ' + freqLabel(item.frequency) : ''}${item.notes ? ' · ' + item.notes : ''}
+                  ${freqLabel(item.frequency)}${item.frequency !== 'monthly' ? ' · ' + fmt(item.amount) + ' ' + freqLabel(item.frequency) : ''}${item.payment_day ? ' · due ' + item.payment_day + ordinal(item.payment_day) : ''}${item.annual_date ? ' · ' + item.annual_date : ''}${item.notes ? ' · ' + item.notes : ''}
                 </div>
               </div>
               <div style="text-align:right;flex-shrink:0">
@@ -2600,10 +2743,13 @@ function openForecastAdd(presetCat) {
   document.getElementById('fc-amount').value = '';
   document.getElementById('fc-notes').value = '';
   document.getElementById('fc-frequency').value = 'monthly';
+  document.getElementById('fc-day').value = '';
+  document.getElementById('fc-annual-date').value = '';
   document.getElementById('fc-owner').value = 'Joint';
   if (presetCat && presetCat !== 'all') {
     document.getElementById('fc-category').value = presetCat;
   }
+  toggleFcDateField();
   openModal('forecast-modal');
 }
 
@@ -2618,8 +2764,11 @@ function editForecastItem(id) {
   document.getElementById('fc-amount').value = item.amount;
   document.getElementById('fc-notes').value = item.notes || '';
   document.getElementById('fc-frequency').value = item.frequency;
+  document.getElementById('fc-day').value = item.payment_day || '';
+  document.getElementById('fc-annual-date').value = item.annual_date || '';
   document.getElementById('fc-owner').value = item.owner;
   document.getElementById('fc-category').value = item.category;
+  toggleFcDateField();
   openModal('forecast-modal');
 }
 
@@ -2631,13 +2780,16 @@ async function submitForecast() {
   if (!name)            { toast('Enter a description', true); return; }
   if (!amount || amount <= 0) { toast('Enter a valid amount', true); return; }
 
+  const freq = document.getElementById('fc-frequency').value;
   const data = {
     name,
-    category:  document.getElementById('fc-category').value,
-    owner:     document.getElementById('fc-owner').value,
+    category:    document.getElementById('fc-category').value,
+    owner:       document.getElementById('fc-owner').value,
     amount,
-    frequency: document.getElementById('fc-frequency').value,
-    notes:     document.getElementById('fc-notes').value.trim(),
+    frequency:   freq,
+    payment_day: (freq === 'monthly' || freq === 'quarterly') ? document.getElementById('fc-day').value : '',
+    annual_date: freq === 'annual' ? document.getElementById('fc-annual-date').value.trim() : '',
+    notes:       document.getElementById('fc-notes').value.trim(),
   };
 
   let item;
@@ -2955,6 +3107,30 @@ function renderProjectionChart() {
       }
     }
   });
+}
+
+// ─── FORECAST DATE FIELD TOGGLE ────────────────────────────────────────────
+function toggleFcDateField() {
+  const freq = document.getElementById('fc-frequency').value;
+  const dayGroup = document.getElementById('fc-day-group');
+  const annualGroup = document.getElementById('fc-annual-date-group');
+  if (freq === 'monthly' || freq === 'quarterly') {
+    dayGroup.style.display = '';
+    annualGroup.style.display = 'none';
+  } else if (freq === 'annual') {
+    dayGroup.style.display = 'none';
+    annualGroup.style.display = '';
+  } else {
+    // weekly
+    dayGroup.style.display = 'none';
+    annualGroup.style.display = 'none';
+  }
+}
+
+// ─── RECURRING TRANSACTION TOGGLE ──────────────────────────────────────────
+function toggleTxRecurring() {
+  const checked = document.getElementById('tx-recurring').checked;
+  document.getElementById('tx-recurring-fields').style.display = checked ? 'block' : 'none';
 }
 
 // ─── AUTO-LOGIN ─────────────────────────────────────────────────────────────
