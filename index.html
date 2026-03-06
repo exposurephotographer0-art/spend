@@ -1372,19 +1372,34 @@ let transactions = [];
 // ─── AUTH ──────────────────────────────────────────────────────────────────
 async function doLogin() {
   const pw = document.getElementById('login-pw').value;
+  const errEl = document.getElementById('login-err');
+  errEl.style.display = 'none';
   try {
     const res = await fetch(`${API}/api/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: pw })
     });
-    if (!res.ok) throw new Error();
+    if (!res.ok) {
+      errEl.textContent = 'Incorrect password. Please try again.';
+      errEl.style.display = 'block';
+      return;
+    }
     const { token: t } = await res.json();
     token = t;
     localStorage.setItem('ha_token', t);
-    showApp();
-  } catch {
-    document.getElementById('login-err').style.display = 'block';
+    try {
+      await showApp();
+    } catch(appErr) {
+      console.error('showApp error:', appErr);
+      // Show app anyway - don't block on secondary data load failures
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      document.getElementById('app').style.flexDirection = 'column';
+    }
+  } catch(e) {
+    errEl.textContent = 'Cannot reach server. Check your connection.';
+    errEl.style.display = 'block';
   }
 }
 
@@ -1428,15 +1443,16 @@ async function showApp() {
 
   populateCategorySelects();
   await ensureDefaultAccounts();
-  // Load forecast + savings % from DB in parallel with other data
+
+  // Load all data - each wrapped so one failure doesn't block the rest
   const [, , , savedPct] = await Promise.all([
-    loadDashboard(),
-    loadMortgage(),
-    loadSalaries(),
-    loadSavingsPctFromDB(),
+    loadDashboard().catch(e => console.warn('loadDashboard:', e)),
+    loadMortgage().catch(e => console.warn('loadMortgage:', e)),
+    loadSalaries().catch(e => console.warn('loadSalaries:', e)),
+    loadSavingsPctFromDB().catch(() => ({ henry: 10, ash: 10 })),
   ]);
-  _savingsPct = savedPct;
-  await loadForecastFromDB();
+  if (savedPct) _savingsPct = savedPct;
+  await loadForecastFromDB().catch(e => console.warn('loadForecast:', e));
 }
 
 async function ensureDefaultAccounts() {
@@ -2943,7 +2959,13 @@ function renderProjectionChart() {
 
 // ─── AUTO-LOGIN ─────────────────────────────────────────────────────────────
 if (token) {
-  showApp().catch(() => logout());
+  showApp().catch(e => {
+    console.error('Auto-login showApp error:', e);
+    // Still try to show the app rather than logging out
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('app').style.flexDirection = 'column';
+  });
 }
 </script>
 </body>
