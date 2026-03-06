@@ -1428,9 +1428,15 @@ async function showApp() {
 
   populateCategorySelects();
   await ensureDefaultAccounts();
-  await Promise.all([loadDashboard(), loadMortgage(), loadSalaries()]);
-  // Pre-load forecast items from localStorage
-  const _stored = loadForecastFromStorage(); if (_stored) forecastItems = _stored;
+  // Load forecast + savings % from DB in parallel with other data
+  const [, , , savedPct] = await Promise.all([
+    loadDashboard(),
+    loadMortgage(),
+    loadSalaries(),
+    loadSavingsPctFromDB(),
+  ]);
+  _savingsPct = savedPct;
+  await loadForecastFromDB();
 }
 
 async function ensureDefaultAccounts() {
@@ -2312,22 +2318,37 @@ const FORECAST_DEFAULTS = [
   { id:-131,name:'Ash savings',    category:'Savings',       owner:'Ash',   amount:0,     frequency:'monthly',   notes:'% of take-home', _isSavingsPct:true, savingsPct:10 },
 ];
 
-const FORECAST_STORAGE_KEY = 'ha_forecast_v2';
-const SAVINGS_STORAGE_KEY   = 'ha_savings_pct_v1';
-let forecastItems = [];      // user overrides / additions
-let forecastCat = 'all';     // which category tab is active
-let forecastActual = {};     // this month's actual spend
-let projectionView = 'joint'; // which view is active on dashboard
+let forecastItems = [];      // user overrides / additions (synced with DB)
+let forecastCat = 'all';
+let forecastActual = {};
+let projectionView = 'joint';
+let _savingsPct = { henry: 10, ash: 10 };
+
+async function loadForecastFromDB() {
+  const data = await api('/api/forecast') || [];
+  forecastItems = data;
+}
+
+async function saveForecastItemToDB(item) {
+  await api('/api/forecast', 'POST', item);
+}
+
+async function deleteForecastItemFromDB(id) {
+  await api(`/api/forecast/${id}`, 'DELETE');
+}
+
+async function loadSavingsPctFromDB() {
+  const settings = await api('/api/settings') || {};
+  return settings.savings_pct || { henry: 10, ash: 10 };
+}
 
 function loadSavingsPct() {
-  try {
-    const raw = localStorage.getItem(SAVINGS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : { henry: 10, ash: 10 };
-  } catch { return { henry: 10, ash: 10 }; }
+  return _savingsPct;
 }
 
 function saveSavingsPct(pcts) {
-  localStorage.setItem(SAVINGS_STORAGE_KEY, JSON.stringify(pcts));
+  _savingsPct = pcts;
+  api('/api/settings', 'POST', { key: 'savings_pct', value: pcts });
 }
 
 // Compute actual monthly saving amounts from salary data + %
@@ -2350,17 +2371,6 @@ function getSavingsAmounts() {
     henryNet,
     ashNet,
   };
-}
-
-function loadForecastFromStorage() {
-  try {
-    const raw = localStorage.getItem(FORECAST_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-
-function saveForecastToStorage() {
-  localStorage.setItem(FORECAST_STORAGE_KEY, JSON.stringify(forecastItems));
 }
 
 // Returns merged list: defaults overridden by any user edits, plus user additions
@@ -2400,8 +2410,7 @@ function freqLabel(f) {
 }
 
 async function loadForecast() {
-  const stored = loadForecastFromStorage();
-  if (stored) forecastItems = stored;
+  await loadForecastFromDB();
 
   const month = new Date().toISOString().slice(0, 7);
   const stats = await api(`/api/stats?month=${month}`) || {};
@@ -2615,34 +2624,29 @@ function submitForecast() {
     notes:     document.getElementById('fc-notes').value.trim(),
   };
 
+  let item;
   if (editId !== '') {
     const numId = parseInt(editId);
-    // Remove any existing override for this id, then add updated one
-    forecastItems = forecastItems.filter(i => i.id !== numId);
-    forecastItems.push({ id: numId, ...data });
+    item = { id: numId, ...data };
   } else {
-    forecastItems.push({ id: Date.now(), ...data });
+    item = { id: Date.now(), ...data };
   }
 
-  saveForecastToStorage();
+  await saveForecastItemToDB(item);
   closeModal('forecast-modal');
   toast(editId !== '' ? 'Updated ✓' : 'Added ✓');
   loadForecast();
 }
 
-function deleteForecastItem(id) {
+async function deleteForecastItem(id) {
   if (id < 0) {
-    // Mark default as deleted
-    forecastItems = forecastItems.filter(i => i.id !== id);
-    forecastItems.push({ id, _deleted: true });
+    // For defaults, store a _deleted marker so we know to hide it
+    await saveForecastItemToDB({ id, _deleted: true });
   } else {
-    forecastItems = forecastItems.filter(i => i.id !== id);
+    await deleteForecastItemFromDB(id);
   }
-  saveForecastToStorage();
   toast('Removed');
-  renderForecastList();
-  renderForecastSummary();
-  renderForecastChart();
+  loadForecast();
 }
 
 // ─── SAVINGS CARD ─────────────────────────────────────────────────────────────
@@ -2734,8 +2738,7 @@ function updateSavingsPct() {
   const ash   = parseInt(document.getElementById('ash-savings-pct')?.value || 10);
   document.getElementById('henry-pct-label').textContent = henry + '%';
   document.getElementById('ash-pct-label').textContent   = ash   + '%';
-  saveSavingsPct({ henry, ash });
-  // Re-render summary & dashboard projection
+  saveSavingsPct({ henry, ash }); // saves to DB + updates _savingsPct in memory
   renderForecastSummary();
   renderProjectionChart();
 }
