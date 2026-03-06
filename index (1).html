@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Henry & Ash — Finances</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #14171f;
+    --surface2: #1c2030;
+    --surface3: #242840;
+    --border: rgba(255,255,255,0.07);
+    --accent: #c8a96e;
+    --accent2: #7eb8d4;
+    --accent3: #a8d5a2;
+    --danger: #e07070;
+    --text: #e8e4dc;
+    --text2: #9a9590;
+    --text3: #5c5850;
+    --henry: #7eb8d4;
+    --ash: #d4a0c8;
+    --radius: 16px;
+    --radius-sm: 10px;
+    font-size: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  /* ── LOGIN ─────────────────────────────────────────────────────── */
+  #login-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: 2rem;
+    background: radial-gradient(ellipse at 50% 40%, #1a1f2e 0%, #0d0f14 70%);
+  }
+
+  .login-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 0.3rem;
+    letter-spacing: -0.02em;
+  }
+
+  .login-sub {
+    color: var(--text2);
+    font-size: 0.85rem;
+    margin-bottom: 3rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 380px;
+  }
+
+  .login-card h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    margin-bottom: 1.5rem;
+    color: var(--text);
+  }
+
+  input[type="password"], input[type="text"], input[type="number"], input[type="date"], select, textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    padding: 0.8rem 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+  }
+
+  select option { background: var(--surface2); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0d0f14;
+    width: 100%;
+  }
+
+  .btn-primary:hover { filter: brightness(1.1); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+
+  .btn-danger {
+    background: rgba(224,112,112,0.15);
+    color: var(--danger);
+    border: 1px solid rgba(224,112,112,0.2);
+  }
+
+  .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+
+  /* ── APP SHELL ──────────────────────────────────────────────────── */
+  #app { display: none; flex-direction: column; min-height: 100dvh; }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.2rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+
+  .header-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .header-right { display: flex; align-items: center; gap: 0.5rem; }
+
+  /* ── NAV ────────────────────────────────────────────────────────── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 100;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.6rem 0.3rem;
+    cursor: pointer;
+    color: var(--text3);
+    transition: color 0.2s;
+    font-size: 0.7rem;
+    font-weight: 500;
+    border: none;
+    background: none;
+    text-align: center;
+  }
+
+  .nav-item.active { color: var(--accent); }
+  .nav-item svg { width: 22px; height: 22px; }
+
+  /* ── MAIN CONTENT ───────────────────────────────────────────────── */
+  .main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.2rem;
+    padding-bottom: calc(70px + max(1rem, env(safe-area-inset-bottom)));
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── CARDS ──────────────────────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+  }
+
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    color: var(--text);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .card-title .badge {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  /* ── ACCOUNT CARDS ──────────────────────────────────────────────── */
+  .accounts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .account-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .account-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .account-card.henry::before { background: var(--henry); }
+  .account-card.ash::before { background: var(--ash); }
+
+  .account-owner {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+  }
+
+  .account-card.henry .account-owner { color: var(--henry); }
+  .account-card.ash .account-owner { color: var(--ash); }
+
+  .account-type {
+    font-size: 0.75rem;
+    color: var(--text2);
+    margin-bottom: 0.5rem;
+  }
+
+  .account-balance {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .account-balance.negative { color: var(--danger); }
+
+  /* ── STAT CHIPS ─────────────────────────────────────────────────── */
+  .stat-row {
+    display: flex;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .stat-chip {
+    flex: 1;
+    min-width: 120px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.9rem 1rem;
+  }
+
+  .stat-label {
+    font-size: 0.72rem;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.3rem;
+  }
+
+  .stat-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .stat-value.positive { color: var(--accent3); }
+  .stat-value.negative { color: var(--danger); }
+
+  /* ── TRANSACTION LIST ───────────────────────────────────────────── */
+  .tx-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+  .tx-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.85rem;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+
+  .tx-icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    background: var(--surface3);
+  }
+
+  .tx-details { flex: 1; min-width: 0; }
+
+  .tx-desc {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tx-meta {
+    font-size: 0.75rem;
+    color: var(--text2);
+    margin-top: 0.15rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .tx-owner-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .tx-amount {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.92rem;
+    font-weight: 500;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .tx-amount.income { color: var(--accent3); }
+  .tx-amount.expense { color: var(--danger); }
+
+  /* ── CATEGORY PILLS ──────────────────────────────────────────────── */
+  .cat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    background: var(--surface3);
+    color: var(--text2);
+  }
+
+  /* ── PROGRESS BARS ───────────────────────────────────────────────── */
+  .progress-bar {
+    height: 6px;
+    background: var(--surface3);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+
+  /* ── FORM GRID ───────────────────────────────────────────────────── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.7rem;
+  }
+
+  .form-grid.single { grid-template-columns: 1fr; }
+  .form-col-2 { grid-column: 1 / -1; }
+
+  .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+
+  .form-label {
+    font-size: 0.78rem;
+    color: var(--text2);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── TABS ────────────────────────────────────────────────────────── */
+  .tabs {
+    display: flex;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    margin-bottom: 1rem;
+    gap: 4px;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 0.5rem;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text2);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active {
+    background: var(--surface3);
+    color: var(--text);
+  }
+
+  /* ── MODAL ───────────────────────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: none;
+    align-items: flex-end;
+    padding: 1rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    max-height: 90dvh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.2rem;
+  }
+
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    color: var(--text);
+  }
+
+  .close-btn {
+    background: var(--surface2);
+    border: none;
+    color: var(--text2);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+  }
+
+  /* ── MORTGAGE ────────────────────────────────────────────────────── */
+  .mortgage-headline {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .mortgage-stat {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.9rem;
+    text-align: center;
+  }
+
+  .mortgage-stat .label {
+    font-size: 0.68rem;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.3rem;
+  }
+
+  .mortgage-stat .value {
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  /* ── SALARY BREAKDOWN ────────────────────────────────────────────── */
+  .salary-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .salary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .salary-row:last-child { border-bottom: none; }
+  .salary-row .key { font-size: 0.88rem; color: var(--text2); }
+  .salary-row .val { font-family: 'DM Mono', monospace; font-size: 0.9rem; color: var(--text); }
+  .salary-row .val.accent { color: var(--accent3); font-weight: 500; }
+  .salary-row .val.deduct { color: var(--danger); }
+
+  /* ── BUDGET BARS ─────────────────────────────────────────────────── */
+  .budget-item {
+    margin-bottom: 1rem;
+  }
+
+  .budget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.3rem;
+  }
+
+  .budget-name { font-size: 0.88rem; font-weight: 500; }
+  .budget-amount { font-family: 'DM Mono', monospace; font-size: 0.82rem; color: var(--text2); }
+
+  /* ── CHART CONTAINER ─────────────────────────────────────────────── */
+  .chart-wrap {
+    position: relative;
+    height: 200px;
+    margin: 0.5rem 0;
+  }
+
+  .chart-wrap-tall { height: 280px; }
+
+  /* ── SECTION HEADER ──────────────────────────────────────────────── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    color: var(--text);
+  }
+
+  /* ── DIVIDER ─────────────────────────────────────────────────────── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1rem 0;
+  }
+
+  /* ── TOAST ───────────────────────────────────────────────────────── */
+  #toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface3);
+    color: var(--text);
+    padding: 0.6rem 1.2rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+    white-space: nowrap;
+    border: 1px solid var(--border);
+  }
+
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── FILTER ROW ──────────────────────────────────────────────────── */
+  .filter-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-row select, .filter-row input {
+    flex: 1;
+    min-width: 120px;
+    font-size: 0.85rem;
+    padding: 0.6rem 0.8rem;
+  }
+
+  /* ── OWNER TOGGLE ────────────────────────────────────────────────── */
+  .owner-toggle {
+    display: flex;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .owner-btn {
+    flex: 1;
+    padding: 0.45rem 0.8rem;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+  }
+
+  .owner-btn.henry.active { background: rgba(126,184,212,0.2); color: var(--henry); }
+  .owner-btn.ash.active { background: rgba(212,160,200,0.2); color: var(--ash); }
+  .owner-btn:not(.active) { color: var(--text3); }
+
+  /* ── SCROLLABLE YEAR TABLE ────────────────────────────────────────── */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    min-width: 500px;
+  }
+
+  th {
+    text-align: left;
+    padding: 0.5rem 0.7rem;
+    color: var(--text2);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  td {
+    padding: 0.5rem 0.7rem;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-family: 'DM Mono', monospace;
+    color: var(--text2);
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr.highlight td { color: var(--accent); background: rgba(200,169,110,0.05); }
+
+  /* ── NET WORTH SUMMARY ────────────────────────────────────────────── */
+  .nw-card {
+    background: linear-gradient(135deg, var(--surface2) 0%, var(--surface3) 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .nw-label { font-size: 0.78rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+  .nw-amount { font-family: 'Playfair Display', serif; font-size: 2.5rem; color: var(--accent); }
+
+  @media (min-width: 600px) {
+    .accounts-grid { grid-template-columns: repeat(4, 1fr); }
+    .mortgage-headline { grid-template-columns: repeat(6, 1fr); }
+  }
+
+  .loading {
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem; color: var(--text3); font-size: 0.9rem; gap: 0.5rem;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-logo">Henry & Ash</div>
+  <div class="login-sub">Family Finance</div>
+  <div class="login-card">
+    <h2>Welcome back</h2>
+    <div class="form-group" style="margin-bottom:1rem">
+      <label class="form-label">Password</label>
+      <input type="password" id="login-pw" placeholder="Enter password" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+    <div id="login-err" style="color:var(--danger);font-size:0.82rem;margin-top:0.7rem;display:none;">Incorrect password. Please try again.</div>
+  </div>
+  <p style="color:var(--text3);font-size:0.75rem;margin-top:2rem;text-align:center;">Sessions last 7 days</p>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header class="app-header">
+    <div class="header-logo">H&A</div>
+    <div class="header-right">
+      <span id="header-month" style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--text2)"></span>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Out</button>
+    </div>
+  </header>
+
+  <div class="main-content">
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <div class="nw-card">
+        <div class="nw-label">Total Net Worth</div>
+        <div class="nw-amount" id="net-worth">£0</div>
+      </div>
+
+      <div id="accounts-grid" class="accounts-grid"></div>
+
+      <div class="stat-row" id="month-stats"></div>
+
+      <div class="card">
+        <div class="card-title">Monthly Cash Flow</div>
+        <div class="chart-wrap">
+          <canvas id="cashflow-chart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-header">
+          <div class="card-title" style="margin:0">Recent Transactions</div>
+          <button class="btn btn-ghost btn-sm" onclick="showPage('transactions')">See all</button>
+        </div>
+        <div id="recent-tx" class="tx-list"></div>
+      </div>
+    </div>
+
+    <!-- TRANSACTIONS -->
+    <div id="page-transactions" class="page">
+      <div class="section-header">
+        <div class="section-title">Transactions</div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('add-tx-modal')">+ Add</button>
+      </div>
+
+      <div class="filter-row">
+        <select id="tx-filter-owner" onchange="loadTransactions()">
+          <option value="">All</option>
+          <option value="Henry">Henry</option>
+          <option value="Ash">Ash</option>
+        </select>
+        <select id="tx-filter-cat" onchange="loadTransactions()">
+          <option value="">All categories</option>
+        </select>
+        <input type="month" id="tx-filter-month" onchange="loadTransactions()">
+      </div>
+
+      <div id="tx-list-full" class="tx-list"></div>
+    </div>
+
+    <!-- BUDGETS -->
+    <div id="page-budgets" class="page">
+      <div class="section-header">
+        <div class="section-title">Budgets</div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('budget-modal')">+ Set Budget</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchBudgetTab('Henry', this)">Henry</button>
+        <button class="tab-btn" onclick="switchBudgetTab('Ash', this)">Ash</button>
+      </div>
+
+      <div id="budget-list"></div>
+
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">Spending by Category</div>
+        <div class="chart-wrap-tall">
+          <canvas id="cat-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- MORTGAGE -->
+    <div id="page-mortgage" class="page">
+      <div class="section-header">
+        <div class="section-title">Mortgage</div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('mortgage-modal')">Edit</button>
+      </div>
+
+      <div class="mortgage-headline" id="mortgage-stats"></div>
+
+      <div class="card">
+        <div class="card-title">Balance Over Time</div>
+        <div class="chart-wrap-tall">
+          <canvas id="mortgage-chart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-header">
+          <div class="card-title" style="margin:0">One-Off Overpayments</div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('overpayment-modal')">+ Add</button>
+        </div>
+        <div id="overpayments-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Amortisation Schedule</div>
+        <div class="table-wrap">
+          <table id="amort-table">
+            <thead>
+              <tr><th>Year</th><th>Balance</th><th>Paid</th><th>Interest</th><th>Equity</th></tr>
+            </thead>
+            <tbody id="amort-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SALARIES -->
+    <div id="page-salary" class="page">
+      <div class="section-header">
+        <div class="section-title">Salaries & Tax</div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('salary-modal')">Edit</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchSalaryTab('Henry', this)">Henry</button>
+        <button class="tab-btn" onclick="switchSalaryTab('Ash', this)">Ash</button>
+      </div>
+
+      <div id="salary-breakdown" class="card"></div>
+
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">Combined Take-Home vs Outgoings</div>
+        <div class="chart-wrap">
+          <canvas id="salary-chart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="showPage('dashboard')">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item" onclick="showPage('transactions')">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Transactions
+    </button>
+    <button class="nav-item" onclick="showPage('budgets')">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Budgets
+    </button>
+    <button class="nav-item" onclick="showPage('mortgage')">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Mortgage
+    </button>
+    <button class="nav-item" onclick="showPage('salary')">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      Salary
+    </button>
+  </nav>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ── MODALS ────────────────────────────────────────────────────────── -->
+
+<!-- Add Transaction -->
+<div id="add-tx-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Transaction</div>
+      <button class="close-btn" onclick="closeModal('add-tx-modal')">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group form-col-2">
+        <label class="form-label">Type</label>
+        <div class="tabs" style="margin:0">
+          <button class="tab-btn active" onclick="setTxType('expense',this)">Expense</button>
+          <button class="tab-btn" onclick="setTxType('income',this)">Income</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Person</label>
+        <select id="tx-owner">
+          <option value="Henry">Henry</option>
+          <option value="Ash">Ash</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount (£)</label>
+        <input type="number" id="tx-amount" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="form-group form-col-2">
+        <label class="form-label">Category</label>
+        <select id="tx-category"></select>
+      </div>
+      <div class="form-group form-col-2">
+        <label class="form-label">Account</label>
+        <select id="tx-account"></select>
+      </div>
+      <div class="form-group form-col-2">
+        <label class="form-label">Description</label>
+        <input type="text" id="tx-desc" placeholder="Optional note">
+      </div>
+      <div class="form-group form-col-2">
+        <label class="form-label">Date</label>
+        <input type="date" id="tx-date">
+      </div>
+    </div>
+    <div style="margin-top:1rem">
+      <button class="btn btn-primary" onclick="submitTransaction()">Add Transaction</button>
+    </div>
+  </div>
+</div>
+
+<!-- Budget Modal -->
+<div id="budget-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Set Budget</div>
+      <button class="close-btn" onclick="closeModal('budget-modal')">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Person</label>
+        <select id="budget-owner">
+          <option value="Henry">Henry</option>
+          <option value="Ash">Ash</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select id="budget-category"></select>
+      </div>
+      <div class="form-group form-col-2">
+        <label class="form-label">Monthly Limit (£)</label>
+        <input type="number" id="budget-limit" placeholder="0.00" min="0">
+      </div>
+    </div>
+    <div style="margin-top:1rem">
+      <button class="btn btn-primary" onclick="submitBudget()">Save Budget</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mortgage Modal -->
+<div id="mortgage-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Mortgage Details</div>
+      <button class="close-btn" onclick="closeModal('mortgage-modal')">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Property Value (£)</label>
+        <input type="number" id="m-property" placeholder="300000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Loan Amount (£)</label>
+        <input type="number" id="m-loan" placeholder="250000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Interest Rate (%)</label>
+        <input type="number" id="m-rate" placeholder="4.5" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Term (years)</label>
+        <input type="number" id="m-term" placeholder="25">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Start Date</label>
+        <input type="date" id="m-start">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Monthly Payment (£)</label>
+        <input type="number" id="m-payment" placeholder="Auto-calc" step="0.01">
+      </div>
+      <div class="form-group form-col-2">
+        <label class="form-label">Monthly Overpayment (£)</label>
+        <input type="number" id="m-overpay" placeholder="0" step="0.01">
+      </div>
+    </div>
+    <div style="display:flex;gap:0.5rem;margin-top:1rem">
+      <button class="btn btn-ghost btn-sm" onclick="calcMortgagePayment()" style="flex:0 0 auto">Calc Payment</button>
+      <button class="btn btn-primary" onclick="submitMortgage()" style="flex:1">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Overpayment Modal -->
+<div id="overpayment-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Overpayment</div>
+      <button class="close-btn" onclick="closeModal('overpayment-modal')">×</button>
+    </div>
+    <div class="form-grid single">
+      <div class="form-group">
+        <label class="form-label">Amount (£)</label>
+        <input type="number" id="op-amount" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input type="date" id="op-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note</label>
+        <input type="text" id="op-note" placeholder="Optional note">
+      </div>
+    </div>
+    <div style="margin-top:1rem">
+      <button class="btn btn-primary" onclick="submitOverpayment()">Add Overpayment</button>
+    </div>
+  </div>
+</div>
+
+<!-- Salary Modal -->
+<div id="salary-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Salary Details</div>
+      <button class="close-btn" onclick="closeModal('salary-modal')">×</button>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchSalaryEdit('Henry', this)">Henry</button>
+      <button class="tab-btn" onclick="switchSalaryEdit('Ash', this)">Ash</button>
+    </div>
+    <div class="form-grid single">
+      <input type="hidden" id="sal-owner" value="Henry">
+      <div class="form-group">
+        <label class="form-label">Gross Annual Salary (£)</label>
+        <input type="number" id="sal-gross" placeholder="35000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Pension Contribution (%)</label>
+        <input type="number" id="sal-pension" placeholder="5" step="0.5">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Student Loan Plan</label>
+        <select id="sal-loan">
+          <option value="none">None</option>
+          <option value="plan1">Plan 1 (pre-2012)</option>
+          <option value="plan2">Plan 2 (2012-2023)</option>
+          <option value="plan4">Plan 4 (Scotland)</option>
+          <option value="plan5">Plan 5 (post-2023)</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:1rem">
+      <button class="btn btn-primary" onclick="submitSalary()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+// REPLACE THIS with your deployed Cloudflare Worker URL
+const API = 'https://finance-app.YOUR-SUBDOMAIN.workers.dev';
+
+const CATEGORIES = [
+  { name: 'Mortgage', icon: '🏠' },
+  { name: 'Bills', icon: '💡' },
+  { name: 'Groceries', icon: '🛒' },
+  { name: 'Eating Out', icon: '🍽️' },
+  { name: 'Shopping', icon: '🛍️' },
+  { name: 'Car', icon: '🚗' },
+  { name: 'Hobbies', icon: '🎮' },
+  { name: 'Sports', icon: '⚽' },
+  { name: 'Social', icon: '🥂' },
+  { name: 'Entertainment', icon: '🎬' },
+  { name: 'Health', icon: '💊' },
+  { name: 'Travel', icon: '✈️' },
+  { name: 'Savings', icon: '💰' },
+  { name: 'Salary', icon: '💷' },
+  { name: 'Other', icon: '📦' },
+];
+
+const CAT_MAP = Object.fromEntries(CATEGORIES.map(c => [c.name, c.icon]));
+const CAT_COLORS = ['#c8a96e','#7eb8d4','#a8d5a2','#d4a0c8','#e07070','#f0c080','#80c0d0','#d08080','#90d090','#b090d0','#e0a060','#70b8d0','#c0d080','#d0a0b0','#a0a0c0'];
+
+let token = localStorage.getItem('ha_token') || '';
+let currentTxType = 'expense';
+let currentBudgetOwner = 'Henry';
+let currentSalaryOwner = 'Henry';
+let charts = {};
+let accounts = [];
+let salaries = {};
+let mortgageData = null;
+let budgets = [];
+let transactions = [];
+
+// ─── AUTH ──────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const pw = document.getElementById('login-pw').value;
+  try {
+    const res = await fetch(`${API}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    });
+    if (!res.ok) throw new Error();
+    const { token: t } = await res.json();
+    token = t;
+    localStorage.setItem('ha_token', t);
+    showApp();
+  } catch {
+    document.getElementById('login-err').style.display = 'block';
+  }
+}
+
+document.getElementById('login-pw').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+function logout() {
+  localStorage.removeItem('ha_token');
+  token = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+async function api(path, method = 'GET', body) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${API}${path}`, opts);
+  if (res.status === 401) { logout(); return null; }
+  return res.ok ? res.json() : null;
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+async function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('app').style.flexDirection = 'column';
+
+  const now = new Date();
+  document.getElementById('header-month').textContent =
+    now.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+  document.getElementById('tx-filter-month').value = now.toISOString().slice(0, 7);
+  document.getElementById('tx-date').value = now.toISOString().slice(0, 10);
+  document.getElementById('op-date').value = now.toISOString().slice(0, 10);
+
+  populateCategorySelects();
+  await ensureDefaultAccounts();
+  await Promise.all([loadDashboard(), loadMortgage(), loadSalaries()]);
+}
+
+async function ensureDefaultAccounts() {
+  accounts = await api('/api/accounts') || [];
+  if (accounts.length === 0) {
+    const defaults = [
+      { owner: 'Henry', type: 'current', name: "Henry's Current", balance: 0 },
+      { owner: 'Henry', type: 'savings', name: "Henry's Savings", balance: 0 },
+      { owner: 'Ash', type: 'current', name: "Ash's Current", balance: 0 },
+      { owner: 'Ash', type: 'savings', name: "Ash's Savings", balance: 0 },
+    ];
+    for (const d of defaults) await api('/api/accounts', 'POST', d);
+    accounts = await api('/api/accounts') || [];
+  }
+  populateAccountSelect();
+}
+
+function populateCategorySelects() {
+  const cats = CATEGORIES.map(c => `<option value="${c.name}">${c.icon} ${c.name}</option>`).join('');
+  document.getElementById('tx-category').innerHTML = cats;
+  document.getElementById('budget-category').innerHTML = cats;
+
+  const filterCats = '<option value="">All categories</option>' +
+    CATEGORIES.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+  document.getElementById('tx-filter-cat').innerHTML = filterCats;
+}
+
+function populateAccountSelect() {
+  const opts = accounts.map(a =>
+    `<option value="${a.id}">${a.owner} – ${a.name}</option>`
+  ).join('');
+  document.getElementById('tx-account').innerHTML = `<option value="">No account</option>` + opts;
+}
+
+// ─── NAVIGATION ────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  const navBtns = document.querySelectorAll('.nav-item');
+  const pages = ['dashboard','transactions','budgets','mortgage','salary'];
+  navBtns[pages.indexOf(name)]?.classList.add('active');
+
+  if (name === 'transactions') loadTransactions();
+  if (name === 'budgets') loadBudgets();
+  if (name === 'mortgage') renderMortgage();
+  if (name === 'salary') renderSalary(currentSalaryOwner);
+}
+
+// ─── MODALS ────────────────────────────────────────────────────────────────
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => {
+    if (e.target === m) m.classList.remove('open');
+  });
+});
+
+// ─── TOAST ─────────────────────────────────────────────────────────────────
+function toast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = isError ? 'rgba(224,112,112,0.9)' : 'var(--surface3)';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ─── DASHBOARD ─────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  accounts = await api('/api/accounts') || [];
+  const month = new Date().toISOString().slice(0, 7);
+  const stats = await api(`/api/stats?month=${month}`) || {};
+
+  renderAccounts(accounts);
+  renderMonthStats(stats);
+  renderCashflowChart(stats.monthly || []);
+  await loadRecentTx();
+}
+
+function renderAccounts(accs) {
+  const grid = document.getElementById('accounts-grid');
+  let total = 0;
+  grid.innerHTML = accs.map(a => {
+    total += a.balance;
+    const neg = a.balance < 0;
+    return `<div class="account-card ${a.owner.toLowerCase()}">
+      <div class="account-owner">${a.owner}</div>
+      <div class="account-type">${a.type === 'current' ? '💳 Current' : '🏦 Savings'}</div>
+      <div class="account-balance ${neg ? 'negative' : ''}">${fmt(a.balance)}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('net-worth').textContent = fmt(total);
+}
+
+function renderMonthStats(stats) {
+  const month = new Date().toISOString().slice(0, 7);
+  const by = stats.byCategory || [];
+  let income = 0, expense = 0;
+  by.forEach(r => {
+    if (r.type === 'income') income += r.total;
+    else expense += r.total;
+  });
+  const net = income - expense;
+  document.getElementById('month-stats').innerHTML = `
+    <div class="stat-chip">
+      <div class="stat-label">Income</div>
+      <div class="stat-value positive">${fmt(income)}</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-label">Expenses</div>
+      <div class="stat-value negative">${fmt(expense)}</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-label">Net</div>
+      <div class="stat-value ${net >= 0 ? 'positive' : 'negative'}">${fmt(net)}</div>
+    </div>`;
+}
+
+function renderCashflowChart(monthly) {
+  const months = [...new Set(monthly.map(m => m.month))].sort().slice(-6);
+  const incomes = months.map(m => {
+    const r = monthly.find(x => x.month === m && x.type === 'income');
+    return r ? r.total : 0;
+  });
+  const expenses = months.map(m => {
+    const r = monthly.find(x => x.month === m && x.type === 'expense');
+    return r ? r.total : 0;
+  });
+
+  if (charts.cashflow) charts.cashflow.destroy();
+  const ctx = document.getElementById('cashflow-chart').getContext('2d');
+  charts.cashflow = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: months.map(m => {
+        const [y, mo] = m.split('-');
+        return new Date(y, mo - 1).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
+      }),
+      datasets: [
+        { label: 'Income', data: incomes, backgroundColor: 'rgba(168,213,162,0.7)', borderRadius: 6 },
+        { label: 'Expenses', data: expenses, backgroundColor: 'rgba(224,112,112,0.7)', borderRadius: 6 },
+      ]
+    },
+    options: chartOpts()
+  });
+}
+
+async function loadRecentTx() {
+  const month = new Date().toISOString().slice(0, 7);
+  const txs = await api(`/api/transactions?month=${month}`) || [];
+  const el = document.getElementById('recent-tx');
+  el.innerHTML = txs.slice(0, 8).map(txHTML).join('');
+}
+
+// ─── TRANSACTIONS ──────────────────────────────────────────────────────────
+async function loadTransactions() {
+  const owner = document.getElementById('tx-filter-owner').value;
+  const cat = document.getElementById('tx-filter-cat').value;
+  const month = document.getElementById('tx-filter-month').value;
+  let q = '?';
+  if (owner) q += `owner=${owner}&`;
+  if (cat) q += `category=${encodeURIComponent(cat)}&`;
+  if (month) q += `month=${month}&`;
+
+  const el = document.getElementById('tx-list-full');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div> Loading…</div>';
+  transactions = await api(`/api/transactions${q}`) || [];
+  el.innerHTML = transactions.length ? transactions.map(tx =>
+    txHTML(tx, true)
+  ).join('') : '<div class="loading">No transactions found</div>';
+}
+
+function txHTML(tx, showDelete = false) {
+  const icon = CAT_MAP[tx.category] || '📦';
+  const ownerColor = tx.owner === 'Henry' ? 'var(--henry)' : 'var(--ash)';
+  const del = showDelete ? `<button onclick="deleteTx(${tx.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:0.2rem;font-size:0.9rem">🗑</button>` : '';
+  return `<div class="tx-item">
+    <div class="tx-icon">${icon}</div>
+    <div class="tx-details">
+      <div class="tx-desc">${tx.description || tx.category}</div>
+      <div class="tx-meta">
+        <div class="tx-owner-dot" style="background:${ownerColor}"></div>
+        <span>${tx.owner}</span>
+        <span>·</span>
+        <span>${tx.category}</span>
+        <span>·</span>
+        <span>${formatDate(tx.date)}</span>
+      </div>
+    </div>
+    <div>
+      <div class="tx-amount ${tx.type}">${tx.type === 'income' ? '+' : '-'}${fmt(tx.amount)}</div>
+      ${del}
+    </div>
+  </div>`;
+}
+
+async function deleteTx(id) {
+  if (!confirm('Delete this transaction?')) return;
+  await api(`/api/transactions/${id}`, 'DELETE');
+  toast('Transaction deleted');
+  loadTransactions();
+  loadDashboard();
+}
+
+function setTxType(type, btn) {
+  currentTxType = type;
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function submitTransaction() {
+  const amount = parseFloat(document.getElementById('tx-amount').value);
+  if (!amount || amount <= 0) { toast('Enter a valid amount', true); return; }
+  const data = {
+    type: currentTxType,
+    owner: document.getElementById('tx-owner').value,
+    amount,
+    category: document.getElementById('tx-category').value,
+    description: document.getElementById('tx-desc').value,
+    date: document.getElementById('tx-date').value,
+    account_id: document.getElementById('tx-account').value || null,
+  };
+  await api('/api/transactions', 'POST', data);
+  closeModal('add-tx-modal');
+  toast('Transaction added ✓');
+  document.getElementById('tx-amount').value = '';
+  document.getElementById('tx-desc').value = '';
+  loadDashboard();
+  if (document.getElementById('page-transactions').classList.contains('active')) loadTransactions();
+}
+
+// ─── BUDGETS ───────────────────────────────────────────────────────────────
+async function loadBudgets() {
+  const month = new Date().toISOString().slice(0, 7);
+  const [b, stats] = await Promise.all([
+    api('/api/budgets'),
+    api(`/api/stats?month=${month}`)
+  ]);
+  budgets = b || [];
+  const spending = {};
+  (stats?.byCategory || []).forEach(r => {
+    if (r.type === 'expense') {
+      const key = `${r.owner}:${r.category}`;
+      spending[key] = (spending[key] || 0) + r.total;
+    }
+  });
+
+  renderBudgetList(currentBudgetOwner, spending);
+  renderCatChart(stats?.byCategory || []);
+}
+
+function renderBudgetList(owner, spending) {
+  const myBudgets = budgets.filter(b => b.owner === owner);
+  const el = document.getElementById('budget-list');
+  if (!myBudgets.length) {
+    el.innerHTML = '<div class="loading">No budgets set. Add one above.</div>';
+    return;
+  }
+  el.innerHTML = myBudgets.map(b => {
+    const spent = spending[`${owner}:${b.category}`] || 0;
+    const pct = Math.min((spent / b.monthly_limit) * 100, 100);
+    const over = spent > b.monthly_limit;
+    const color = over ? 'var(--danger)' : pct > 80 ? '#f0c080' : 'var(--accent3)';
+    return `<div class="budget-item">
+      <div class="budget-header">
+        <span class="budget-name">${CAT_MAP[b.category] || '📦'} ${b.category}</span>
+        <span class="budget-amount" style="color:${color}">${fmt(spent)} / ${fmt(b.monthly_limit)}</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function switchBudgetTab(owner, btn) {
+  currentBudgetOwner = owner;
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadBudgets();
+}
+
+function renderCatChart(byCategory) {
+  const expenses = byCategory.filter(r => r.type === 'expense');
+  const cats = [...new Set(expenses.map(r => r.category))];
+  const data = cats.map(c => expenses.filter(r => r.category === c).reduce((s, r) => s + r.total, 0));
+
+  if (charts.cat) charts.cat.destroy();
+  const ctx = document.getElementById('cat-chart').getContext('2d');
+  charts.cat = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: cats.map(c => `${CAT_MAP[c] || '📦'} ${c}`),
+      datasets: [{ data, backgroundColor: CAT_COLORS, borderWidth: 0 }]
+    },
+    options: {
+      ...chartOpts(),
+      cutout: '65%',
+      plugins: { legend: { position: 'right', labels: { color: '#9a9590', font: { size: 11 }, boxWidth: 12 } } }
+    }
+  });
+}
+
+async function submitBudget() {
+  const data = {
+    owner: document.getElementById('budget-owner').value,
+    category: document.getElementById('budget-category').value,
+    monthly_limit: parseFloat(document.getElementById('budget-limit').value) || 0,
+  };
+  await api('/api/budgets', 'POST', data);
+  closeModal('budget-modal');
+  toast('Budget saved ✓');
+  document.getElementById('budget-limit').value = '';
+  loadBudgets();
+}
+
+// ─── MORTGAGE ──────────────────────────────────────────────────────────────
+async function loadMortgage() {
+  const data = await api('/api/mortgage') || {};
+  mortgageData = data;
+}
+
+function renderMortgage() {
+  if (!mortgageData?.mortgage) {
+    document.getElementById('mortgage-stats').innerHTML =
+      '<div class="loading">No mortgage data. Click Edit to add.</div>';
+    return;
+  }
+  const m = mortgageData.mortgage;
+  const ops = mortgageData.overpayments || [];
+  const schedule = calcAmortisation(m, ops);
+  const now = new Date();
+  const elapsed = monthsDiff(new Date(m.start_date), now);
+  const curRow = schedule[Math.min(elapsed, schedule.length - 1)];
+  const originalMonths = m.term_years * 12;
+  const savedMonths = originalMonths - schedule.length;
+  const totalInterestNormal = calcTotalInterestNoOverpay(m);
+  const totalInterestActual = schedule.reduce((s, r) => s + r.interest, 0);
+
+  const stats = [
+    { label: 'Remaining Balance', value: fmt(curRow?.balance || m.loan_amount) },
+    { label: 'Monthly Payment', value: fmt(m.monthly_payment) },
+    { label: 'Interest Rate', value: `${m.interest_rate}%` },
+    { label: 'Months Saved', value: savedMonths > 0 ? `${savedMonths}mo` : '–', accent: true },
+    { label: 'Interest Saved', value: savedMonths > 0 ? fmt(totalInterestNormal - totalInterestActual) : '–', accent: true },
+    { label: 'Paid Off', value: schedule.length < 9999 ? payoffDate(m.start_date, schedule.length) : 'N/A' },
+  ];
+
+  document.getElementById('mortgage-stats').innerHTML = stats.map(s =>
+    `<div class="mortgage-stat">
+      <div class="label">${s.label}</div>
+      <div class="value" style="${s.accent ? 'color:var(--accent3)' : ''}">${s.value}</div>
+    </div>`
+  ).join('');
+
+  renderMortgageChart(schedule, m);
+  renderAmortTable(schedule, elapsed);
+  renderOverpayments(ops);
+
+  // Populate edit modal
+  document.getElementById('m-property').value = m.property_value;
+  document.getElementById('m-loan').value = m.loan_amount;
+  document.getElementById('m-rate').value = m.interest_rate;
+  document.getElementById('m-term').value = m.term_years;
+  document.getElementById('m-start').value = m.start_date;
+  document.getElementById('m-payment').value = m.monthly_payment;
+  document.getElementById('m-overpay').value = m.overpayment_monthly || 0;
+}
+
+function calcAmortisation(m, overpayments = []) {
+  let balance = m.loan_amount;
+  const monthlyRate = m.interest_rate / 100 / 12;
+  const payment = m.monthly_payment;
+  const monthlyOP = m.overpayment_monthly || 0;
+  const schedule = [];
+  const startDate = new Date(m.start_date);
+  let totalPaid = 0;
+  let totalInterest = 0;
+
+  for (let i = 0; i < m.term_years * 12; i++) {
+    if (balance <= 0) break;
+    const date = new Date(startDate);
+    date.setMonth(date.getMonth() + i);
+    const dateStr = date.toISOString().slice(0, 7);
+
+    // Add one-off overpayments for this month
+    const monthOps = overpayments
+      .filter(o => o.date.slice(0, 7) === dateStr)
+      .reduce((s, o) => s + o.amount, 0);
+
+    const interest = balance * monthlyRate;
+    const principal = Math.min(payment - interest + monthlyOP + monthOps, balance);
+    balance = Math.max(balance - principal, 0);
+    totalInterest += interest;
+    totalPaid += payment + monthlyOP + monthOps;
+
+    schedule.push({
+      month: i + 1,
+      date: dateStr,
+      balance: Math.round(balance * 100) / 100,
+      principal: Math.round(principal * 100) / 100,
+      interest: Math.round(interest * 100) / 100,
+      totalPaid: Math.round(totalPaid * 100) / 100,
+    });
+    if (balance <= 0) break;
+  }
+  return schedule;
+}
+
+function calcTotalInterestNoOverpay(m) {
+  let balance = m.loan_amount;
+  const monthlyRate = m.interest_rate / 100 / 12;
+  const payment = m.monthly_payment;
+  let total = 0;
+  for (let i = 0; i < m.term_years * 12; i++) {
+    if (balance <= 0) break;
+    const interest = balance * monthlyRate;
+    balance = Math.max(balance - (payment - interest), 0);
+    total += interest;
+  }
+  return total;
+}
+
+function renderMortgageChart(schedule, m) {
+  // Show yearly data points
+  const yearly = schedule.filter((r, i) => (i + 1) % 12 === 0 || i === 0);
+  const labels = yearly.map(r => r.date.slice(0, 4));
+  const balances = yearly.map(r => r.balance);
+  const equities = yearly.map(r => m.property_value - r.balance);
+
+  if (charts.mortgage) charts.mortgage.destroy();
+  const ctx = document.getElementById('mortgage-chart').getContext('2d');
+  charts.mortgage = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Remaining Balance',
+          data: balances,
+          borderColor: 'var(--danger)',
+          backgroundColor: 'rgba(224,112,112,0.1)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+        },
+        {
+          label: 'Equity',
+          data: equities,
+          borderColor: 'var(--accent3)',
+          backgroundColor: 'rgba(168,213,162,0.1)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+        },
+      ]
+    },
+    options: { ...chartOpts(), scales: { ...chartOpts().scales, y: { ...chartOpts().scales.y, ticks: { callback: v => '£' + Math.round(v / 1000) + 'k', color: '#5c5850' } } } }
+  });
+}
+
+function renderAmortTable(schedule, currentMonth) {
+  const yearly = [];
+  for (let yr = 1; yr <= Math.ceil(schedule.length / 12); yr++) {
+    const row = schedule[Math.min(yr * 12 - 1, schedule.length - 1)];
+    if (row) yearly.push({ year: yr, ...row });
+  }
+  document.getElementById('amort-body').innerHTML = yearly.map(r => {
+    const isNow = Math.ceil(currentMonth / 12) === r.year;
+    return `<tr class="${isNow ? 'highlight' : ''}">
+      <td>Yr ${r.year}${isNow ? ' ←' : ''}</td>
+      <td>${fmt(r.balance)}</td>
+      <td>${fmt(r.totalPaid)}</td>
+      <td>${fmt(r.interest)}</td>
+      <td>${fmt(r.principal)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderOverpayments(ops) {
+  const el = document.getElementById('overpayments-list');
+  if (!ops.length) { el.innerHTML = '<div class="loading">No one-off overpayments</div>'; return; }
+  el.innerHTML = ops.map(o => `
+    <div class="tx-item">
+      <div class="tx-icon">💰</div>
+      <div class="tx-details">
+        <div class="tx-desc">${o.note || 'Overpayment'}</div>
+        <div class="tx-meta">${formatDate(o.date)}</div>
+      </div>
+      <div>
+        <div class="tx-amount income">+${fmt(o.amount)}</div>
+        <button onclick="deleteOverpayment(${o.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:0.9rem">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+async function deleteOverpayment(id) {
+  await api(`/api/mortgage/overpayment/${id}`, 'DELETE');
+  toast('Overpayment removed');
+  mortgageData = await api('/api/mortgage') || {};
+  renderMortgage();
+}
+
+function calcMortgagePayment() {
+  const loan = parseFloat(document.getElementById('m-loan').value);
+  const rate = parseFloat(document.getElementById('m-rate').value) / 100 / 12;
+  const n = parseFloat(document.getElementById('m-term').value) * 12;
+  if (!loan || !rate || !n) { toast('Fill loan, rate, and term first', true); return; }
+  const payment = loan * rate * Math.pow(1 + rate, n) / (Math.pow(1 + rate, n) - 1);
+  document.getElementById('m-payment').value = Math.round(payment * 100) / 100;
+  toast(`Calculated: ${fmt(payment)}/month`);
+}
+
+async function submitMortgage() {
+  const data = {
+    property_value: parseFloat(document.getElementById('m-property').value),
+    loan_amount: parseFloat(document.getElementById('m-loan').value),
+    interest_rate: parseFloat(document.getElementById('m-rate').value),
+    term_years: parseInt(document.getElementById('m-term').value),
+    start_date: document.getElementById('m-start').value,
+    monthly_payment: parseFloat(document.getElementById('m-payment').value),
+    overpayment_monthly: parseFloat(document.getElementById('m-overpay').value) || 0,
+  };
+  await api('/api/mortgage', 'POST', data);
+  closeModal('mortgage-modal');
+  toast('Mortgage updated ✓');
+  mortgageData = await api('/api/mortgage') || {};
+  renderMortgage();
+}
+
+async function submitOverpayment() {
+  const amount = parseFloat(document.getElementById('op-amount').value);
+  if (!amount) { toast('Enter an amount', true); return; }
+  await api('/api/mortgage/overpayment', 'POST', {
+    amount,
+    date: document.getElementById('op-date').value,
+    note: document.getElementById('op-note').value,
+  });
+  closeModal('overpayment-modal');
+  toast('Overpayment added ✓');
+  document.getElementById('op-amount').value = '';
+  document.getElementById('op-note').value = '';
+  mortgageData = await api('/api/mortgage') || {};
+  renderMortgage();
+}
+
+// ─── SALARIES (UK TAX 2024/25) ─────────────────────────────────────────────
+async function loadSalaries() {
+  const data = await api('/api/salaries') || [];
+  salaries = {};
+  data.forEach(s => salaries[s.owner] = s);
+}
+
+function calcUKTax(gross, pensionPct, loanPlan) {
+  const pension = gross * (pensionPct / 100);
+  const taxable = gross - pension;
+
+  // Income Tax 2024/25
+  const personalAllowance = taxable > 100000 ? Math.max(0, 12570 - (taxable - 100000) / 2) : 12570;
+  let tax = 0;
+  const above = Math.max(0, taxable - personalAllowance);
+  if (above > 0) {
+    const basic = Math.min(above, 50270 - personalAllowance);
+    const higher = Math.min(Math.max(above - (50270 - personalAllowance), 0), 125140 - 50270);
+    const additional = Math.max(above - (125140 - personalAllowance), 0);
+    tax = basic * 0.20 + higher * 0.40 + additional * 0.45;
+  }
+
+  // NI 2024/25 (Employee)
+  let ni = 0;
+  if (taxable > 12570) {
+    ni = Math.min(taxable - 12570, 50270 - 12570) * 0.08;
+    if (taxable > 50270) ni += (taxable - 50270) * 0.02;
+  }
+
+  // Student Loan
+  const loanThresholds = { plan1: 24990, plan2: 27295, plan4: 31395, plan5: 25000 };
+  const loanRates = { plan1: 0.09, plan2: 0.09, plan4: 0.09, plan5: 0.09 };
+  let studentLoan = 0;
+  if (loanPlan && loanPlan !== 'none' && loanThresholds[loanPlan]) {
+    studentLoan = Math.max(gross - loanThresholds[loanPlan], 0) * loanRates[loanPlan];
+  }
+
+  const netAnnual = gross - tax - ni - pension - studentLoan;
+  return { gross, pension, tax, ni, studentLoan, netAnnual, netMonthly: netAnnual / 12 };
+}
+
+function renderSalary(owner) {
+  const s = salaries[owner];
+  const el = document.getElementById('salary-breakdown');
+  if (!s) {
+    el.innerHTML = `<div class="loading">No salary data for ${owner}. Click Edit.</div>`;
+    return;
+  }
+  const t = calcUKTax(s.gross_salary, s.pension_percent, s.student_loan_plan);
+  el.innerHTML = `
+    <div class="card-title">${owner}'s Salary Breakdown</div>
+    <div class="salary-breakdown">
+      <div class="salary-row"><span class="key">Gross Salary</span><span class="val">${fmt(t.gross)}</span></div>
+      <div class="salary-row"><span class="key">Pension (${s.pension_percent}%)</span><span class="val deduct">−${fmt(t.pension)}</span></div>
+      <div class="salary-row"><span class="key">Income Tax</span><span class="val deduct">−${fmt(t.tax)}</span></div>
+      <div class="salary-row"><span class="key">National Insurance</span><span class="val deduct">−${fmt(t.ni)}</span></div>
+      ${t.studentLoan > 0 ? `<div class="salary-row"><span class="key">Student Loan</span><span class="val deduct">−${fmt(t.studentLoan)}</span></div>` : ''}
+      <div class="salary-row"><span class="key" style="font-weight:600;color:var(--text)">Net Annual</span><span class="val accent">${fmt(t.netAnnual)}</span></div>
+      <div class="salary-row"><span class="key" style="font-weight:600;color:var(--text)">Net Monthly</span><span class="val accent">${fmt(t.netMonthly)}</span></div>
+      <div class="salary-row"><span class="key">Net Weekly</span><span class="val">${fmt(t.netAnnual / 52)}</span></div>
+      <div class="salary-row"><span class="key">Effective Tax Rate</span><span class="val">${((t.tax + t.ni) / t.gross * 100).toFixed(1)}%</span></div>
+    </div>`;
+  renderSalaryChart();
+}
+
+async function renderSalaryChart() {
+  const month = new Date().toISOString().slice(0, 7);
+  const stats = await api(`/api/stats?month=${month}`) || {};
+  let totalTakeHome = 0;
+  Object.values(salaries).forEach(s => {
+    const t = calcUKTax(s.gross_salary, s.pension_percent, s.student_loan_plan);
+    totalTakeHome += t.netMonthly;
+  });
+
+  const expenses = (stats.byCategory || []).filter(r => r.type === 'expense');
+  const totalExpenses = expenses.reduce((s, r) => s + r.total, 0);
+  const surplus = totalTakeHome - totalExpenses;
+
+  if (charts.salary) charts.salary.destroy();
+  const ctx = document.getElementById('salary-chart').getContext('2d');
+  charts.salary = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Take-Home', 'Expenses', 'Surplus'],
+      datasets: [{
+        data: [totalTakeHome, totalExpenses, Math.max(surplus, 0)],
+        backgroundColor: ['rgba(168,213,162,0.7)', 'rgba(224,112,112,0.7)', 'rgba(200,169,110,0.7)'],
+        borderRadius: 8,
+      }]
+    },
+    options: { ...chartOpts(), plugins: { legend: { display: false } } }
+  });
+}
+
+function switchSalaryTab(owner, btn) {
+  currentSalaryOwner = owner;
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSalary(owner);
+}
+
+function switchSalaryEdit(owner, btn) {
+  document.getElementById('sal-owner').value = owner;
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const s = salaries[owner];
+  if (s) {
+    document.getElementById('sal-gross').value = s.gross_salary;
+    document.getElementById('sal-pension').value = s.pension_percent;
+    document.getElementById('sal-loan').value = s.student_loan_plan;
+  }
+}
+
+async function submitSalary() {
+  const data = {
+    owner: document.getElementById('sal-owner').value,
+    gross_salary: parseFloat(document.getElementById('sal-gross').value) || 0,
+    pension_percent: parseFloat(document.getElementById('sal-pension').value) || 5,
+    student_loan_plan: document.getElementById('sal-loan').value,
+  };
+  await api('/api/salaries', 'POST', data);
+  closeModal('salary-modal');
+  toast('Salary saved ✓');
+  await loadSalaries();
+  renderSalary(currentSalaryOwner);
+}
+
+// ─── HELPERS ───────────────────────────────────────────────────────────────
+function fmt(n) {
+  if (n === undefined || n === null) return '£0';
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(n);
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
+}
+
+function monthsDiff(d1, d2) {
+  return (d2.getFullYear() - d1.getFullYear()) * 12 + d2.getMonth() - d1.getMonth();
+}
+
+function payoffDate(startDate, months) {
+  const d = new Date(startDate);
+  d.setMonth(d.getMonth() + months);
+  return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+}
+
+function chartOpts() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1c2030',
+        borderColor: 'rgba(255,255,255,0.07)',
+        borderWidth: 1,
+        titleColor: '#e8e4dc',
+        bodyColor: '#9a9590',
+        callbacks: {
+          label: ctx => ' £' + Math.round(ctx.raw).toLocaleString('en-GB')
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5c5850', font: { size: 11 } } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5c5850', font: { size: 11 }, callback: v => '£' + Math.round(v).toLocaleString('en-GB') } }
+    }
+  };
+}
+
+// ─── AUTO-LOGIN ─────────────────────────────────────────────────────────────
+if (token) {
+  showApp().catch(() => logout());
+}
+</script>
+</body>
+</html>
