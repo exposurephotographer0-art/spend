@@ -788,8 +788,25 @@
 
       <div class="stat-row" id="month-stats"></div>
 
+      <!-- 12-month projection -->
       <div class="card">
-        <div class="card-title">Monthly Cash Flow</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
+          <div class="card-title" style="margin:0">12-Month Projection</div>
+          <div style="display:flex;gap:0.3rem">
+            <button class="tab-btn active" id="proj-btn-joint" onclick="switchProjectionView('joint',this)" style="padding:0.3rem 0.6rem;font-size:0.72rem">Joint</button>
+            <button class="tab-btn" id="proj-btn-henry" onclick="switchProjectionView('henry',this)" style="padding:0.3rem 0.6rem;font-size:0.72rem">Henry</button>
+            <button class="tab-btn" id="proj-btn-ash" onclick="switchProjectionView('ash',this)" style="padding:0.3rem 0.6rem;font-size:0.72rem">Ash</button>
+          </div>
+        </div>
+        <div id="proj-summary" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.8rem"></div>
+        <div class="chart-wrap-tall">
+          <canvas id="projection-chart"></canvas>
+        </div>
+        <div style="margin-top:0.5rem;font-size:0.72rem;color:var(--text3);text-align:center">Based on forecast costs & salary take-home. Dashed = projection.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Monthly Cash Flow (Historical)</div>
         <div class="chart-wrap">
           <canvas id="cashflow-chart"></canvas>
         </div>
@@ -1015,6 +1032,7 @@
         <button class="nav-item" onclick="switchForecastCat('Health',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">💊<br>Health</button>
         <button class="nav-item" onclick="switchForecastCat('Travel',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">✈️<br>Travel</button>
         <button class="nav-item" onclick="switchForecastCat('Other',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">📦<br>Other</button>
+        <button class="nav-item" onclick="switchForecastCat('Savings',this)" style="min-width:60px;padding:0.5rem 0.4rem;font-size:0.68rem">💰<br>Savings</button>
       </div>
 
       <div id="forecast-list"></div>
@@ -1500,6 +1518,7 @@ async function loadDashboard() {
   renderAccounts(accounts);
   renderMonthStats(stats);
   renderCashflowChart(stats.monthly || []);
+  renderProjectionChart();
   await loadRecentTx();
 }
 
@@ -2095,6 +2114,7 @@ async function submitSalary() {
   toast('Salary saved ✓');
   await loadSalaries();
   renderSalary(currentSalaryOwner);
+  renderProjectionChart(); // update dashboard projection with new salary
 }
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────
@@ -2286,12 +2306,51 @@ const FORECAST_DEFAULTS = [
   // ── TRAVEL ──
   { id:-120,name:'Train / transport',category:'Travel',      owner:'Henry', amount:60,    frequency:'monthly',   notes:'' },
   { id:-121,name:'Holidays fund',  category:'Travel',        owner:'Joint', amount:200,   frequency:'monthly',   notes:'Savings pot' },
+  // ── SAVINGS (% of take-home - amounts computed dynamically) ──
+  // These are placeholders; actual amounts are derived from salary data + savings %
+  { id:-130,name:'Henry savings',  category:'Savings',       owner:'Henry', amount:0,     frequency:'monthly',   notes:'% of take-home', _isSavingsPct:true, savingsPct:10 },
+  { id:-131,name:'Ash savings',    category:'Savings',       owner:'Ash',   amount:0,     frequency:'monthly',   notes:'% of take-home', _isSavingsPct:true, savingsPct:10 },
 ];
 
 const FORECAST_STORAGE_KEY = 'ha_forecast_v2';
+const SAVINGS_STORAGE_KEY   = 'ha_savings_pct_v1';
 let forecastItems = [];      // user overrides / additions
 let forecastCat = 'all';     // which category tab is active
 let forecastActual = {};     // this month's actual spend
+let projectionView = 'joint'; // which view is active on dashboard
+
+function loadSavingsPct() {
+  try {
+    const raw = localStorage.getItem(SAVINGS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : { henry: 10, ash: 10 };
+  } catch { return { henry: 10, ash: 10 }; }
+}
+
+function saveSavingsPct(pcts) {
+  localStorage.setItem(SAVINGS_STORAGE_KEY, JSON.stringify(pcts));
+}
+
+// Compute actual monthly saving amounts from salary data + %
+function getSavingsAmounts() {
+  const pcts = loadSavingsPct();
+  let henryNet = 0, ashNet = 0;
+  if (salaries['Henry']) {
+    const t = calcUKTax(salaries['Henry'].gross_salary, salaries['Henry'].pension_percent, salaries['Henry'].student_loan_plan);
+    henryNet = t.netMonthly;
+  }
+  if (salaries['Ash']) {
+    const t = calcUKTax(salaries['Ash'].gross_salary, salaries['Ash'].pension_percent, salaries['Ash'].student_loan_plan);
+    ashNet = t.netMonthly;
+  }
+  return {
+    henry: (henryNet * pcts.henry) / 100,
+    ash:   (ashNet   * pcts.ash)   / 100,
+    henryPct: pcts.henry,
+    ashPct:   pcts.ash,
+    henryNet,
+    ashNet,
+  };
+}
 
 function loadForecastFromStorage() {
   try {
@@ -2309,9 +2368,22 @@ function getMergedForecast() {
   const overrides = {};
   forecastItems.forEach(i => { overrides[i.id] = i; });
   const deleted = new Set(forecastItems.filter(i => i._deleted).map(i => i.id));
+  const savAmt = getSavingsAmounts();
+
   const defaults = FORECAST_DEFAULTS
     .filter(d => !deleted.has(d.id))
-    .map(d => overrides[d.id] ? { ...d, ...overrides[d.id] } : d);
+    .map(d => {
+      let item = overrides[d.id] ? { ...d, ...overrides[d.id] } : { ...d };
+      // For savings % items, compute live amount from salary
+      if (item._isSavingsPct) {
+        const pct = overrides[item.id]?.savingsPct ?? item.savingsPct;
+        item.savingsPct = pct;
+        item.amount = item.owner === 'Henry'
+          ? (savAmt.henryNet * pct) / 100
+          : (savAmt.ashNet   * pct) / 100;
+      }
+      return item;
+    });
   const additions = forecastItems.filter(i => i.id > 0 && !i._deleted);
   return [...defaults, ...additions];
 }
@@ -2416,12 +2488,19 @@ function renderForecastChart() {
 
 function renderForecastList() {
   const all = getMergedForecast();
-  const visible = forecastCat === 'all' ? all : all.filter(i => i.category === forecastCat);
   const el = document.getElementById('forecast-list');
 
-  // Group by category
+  // If Savings tab selected, render special savings card
+  if (forecastCat === 'Savings') {
+    renderSavingsCard(el, all);
+    return;
+  }
+
+  const visible = forecastCat === 'all' ? all : all.filter(i => i.category === forecastCat);
+
+  // Group by category (exclude Savings from All view - shown separately)
   const byCat = {};
-  visible.forEach(i => { (byCat[i.category] = byCat[i.category] || []).push(i); });
+  visible.filter(i => i.category !== 'Savings').forEach(i => { (byCat[i.category] = byCat[i.category] || []).push(i); });
 
   if (!Object.keys(byCat).length) {
     el.innerHTML = '<div class="loading">No items in this category</div>';
@@ -2564,6 +2643,299 @@ function deleteForecastItem(id) {
   renderForecastList();
   renderForecastSummary();
   renderForecastChart();
+}
+
+// ─── SAVINGS CARD ─────────────────────────────────────────────────────────────
+function renderSavingsCard(el, allItems) {
+  const savAmt = getSavingsAmounts();
+  const pcts   = loadSavingsPct();
+  const savingsItems = allItems.filter(i => i.category === 'Savings');
+  const totalSavings = savAmt.henry + savAmt.ash;
+  const henryCol = 'var(--henry)', ashCol = 'var(--ash)';
+
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:0.8rem">
+      <div class="card-title">💰 Savings from Salary</div>
+      <p style="font-size:0.8rem;color:var(--text2);margin-bottom:1rem">
+        Set the percentage of each person's monthly take-home that gets moved to savings each month.
+        ${!salaries['Henry'] && !salaries['Ash'] ? '<br><span style="color:var(--danger)">⚠ Add salary data first in the Salary tab.</span>' : ''}
+      </p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-top:3px solid ${henryCol};border-radius:var(--radius-sm);padding:1rem">
+          <div style="font-size:0.75rem;font-weight:600;color:${henryCol};margin-bottom:0.5rem">HENRY</div>
+          <div style="font-size:0.78rem;color:var(--text2);margin-bottom:0.3rem">Take-home: <span style="font-family:'DM Mono',monospace;color:var(--text)">${fmt(savAmt.henryNet)}/mo</span></div>
+          <div class="form-group" style="margin-bottom:0.6rem">
+            <label class="form-label">Savings %</label>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+              <input type="range" id="henry-savings-pct" min="0" max="50" step="1" value="${pcts.henry}"
+                oninput="updateSavingsPct()" style="flex:1;accent-color:${henryCol}">
+              <span id="henry-pct-label" style="font-family:'DM Mono',monospace;font-size:0.9rem;color:${henryCol};min-width:32px">${pcts.henry}%</span>
+            </div>
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:1.1rem;color:${henryCol}">${fmt(savAmt.henry)}<span style="font-size:0.72rem;color:var(--text3)">/mo</span></div>
+          <div style="font-size:0.72rem;color:var(--text3)">${fmt(savAmt.henry * 12)}/year</div>
+        </div>
+
+        <div style="background:var(--surface2);border:1px solid var(--border);border-top:3px solid ${ashCol};border-radius:var(--radius-sm);padding:1rem">
+          <div style="font-size:0.75rem;font-weight:600;color:${ashCol};margin-bottom:0.5rem">ASH</div>
+          <div style="font-size:0.78rem;color:var(--text2);margin-bottom:0.3rem">Take-home: <span style="font-family:'DM Mono',monospace;color:var(--text)">${fmt(savAmt.ashNet)}/mo</span></div>
+          <div class="form-group" style="margin-bottom:0.6rem">
+            <label class="form-label">Savings %</label>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+              <input type="range" id="ash-savings-pct" min="0" max="50" step="1" value="${pcts.ash}"
+                oninput="updateSavingsPct()" style="flex:1;accent-color:${ashCol}">
+              <span id="ash-pct-label" style="font-family:'DM Mono',monospace;font-size:0.9rem;color:${ashCol};min-width:32px">${pcts.ash}%</span>
+            </div>
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:1.1rem;color:${ashCol}">${fmt(savAmt.ash)}<span style="font-size:0.72rem;color:var(--text3)">/mo</span></div>
+          <div style="font-size:0.72rem;color:var(--text3)">${fmt(savAmt.ash * 12)}/year</div>
+        </div>
+      </div>
+
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.9rem;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em">Combined savings</div>
+          <div style="font-family:'DM Mono',monospace;font-size:1.3rem;color:var(--accent3)">${fmt(totalSavings)}/mo</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:0.75rem;color:var(--text2)">Annual</div>
+          <div style="font-family:'DM Mono',monospace;font-size:1rem;color:var(--accent3)">${fmt(totalSavings * 12)}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💹 Savings Projection (12 months)</div>
+      <div class="chart-wrap" style="height:180px"><canvas id="savings-proj-chart"></canvas></div>
+      <div style="margin-top:0.8rem">
+        ${savingsItems.filter(i => !i._isSavingsPct).map(item => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-size:0.85rem">${item.name}</div>
+              <div style="font-size:0.72rem;color:var(--text3)">${item.owner} · ${freqLabel(item.frequency)}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.4rem">
+              <span style="font-family:'DM Mono',monospace;font-size:0.88rem;color:var(--accent3)">${fmt(toMonthly(item.amount, item.frequency))}/mo</span>
+              <button onclick="editForecastItem(${item.id})" style="background:var(--surface3);border:none;color:var(--text2);cursor:pointer;width:26px;height:26px;border-radius:6px;font-size:0.8rem">✏️</button>
+              <button onclick="deleteForecastItem(${item.id})" style="background:var(--surface3);border:none;color:var(--danger);cursor:pointer;width:26px;height:26px;border-radius:6px;font-size:0.8rem">×</button>
+            </div>
+          </div>`).join('')}
+        <button onclick="openForecastAdd('Savings')" style="width:100%;margin-top:0.8rem;background:none;border:1px dashed var(--border);color:var(--text3);border-radius:8px;padding:0.4rem;font-size:0.8rem;cursor:pointer">+ add additional savings goal</button>
+      </div>
+    </div>`;
+
+  // Render savings projection chart
+  renderSavingsProjChart(savAmt, savingsItems.filter(i => !i._isSavingsPct));
+}
+
+function updateSavingsPct() {
+  const henry = parseInt(document.getElementById('henry-savings-pct')?.value || 10);
+  const ash   = parseInt(document.getElementById('ash-savings-pct')?.value || 10);
+  document.getElementById('henry-pct-label').textContent = henry + '%';
+  document.getElementById('ash-pct-label').textContent   = ash   + '%';
+  saveSavingsPct({ henry, ash });
+  // Re-render summary & dashboard projection
+  renderForecastSummary();
+  renderProjectionChart();
+}
+
+function renderSavingsProjChart(savAmt, extraItems) {
+  const ctx = document.getElementById('savings-proj-chart')?.getContext('2d');
+  if (!ctx) return;
+  const months = [];
+  const now = new Date();
+  let henryCum = 0, ashCum = 0;
+  const hData = [], aData = [], jData = [];
+  for (let i = 1; i <= 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    months.push(d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }));
+    henryCum += savAmt.henry;
+    ashCum   += savAmt.ash;
+    extraItems.forEach(item => {
+      const mo = toMonthly(item.amount, item.frequency);
+      if (item.owner === 'Henry') henryCum += mo;
+      else if (item.owner === 'Ash') ashCum += mo;
+      else { henryCum += mo / 2; ashCum += mo / 2; }
+    });
+    hData.push(Math.round(henryCum));
+    aData.push(Math.round(ashCum));
+    jData.push(Math.round(henryCum + ashCum));
+  }
+  if (charts.savingsProj) charts.savingsProj.destroy();
+  charts.savingsProj = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [
+        { label: 'Combined', data: jData, borderColor: 'rgba(168,213,162,0.9)', backgroundColor: 'rgba(168,213,162,0.1)', fill: true, tension: 0.4, pointRadius: 3 },
+        { label: 'Henry',    data: hData, borderColor: 'var(--henry)', backgroundColor: 'transparent', tension: 0.4, pointRadius: 2, borderDash: [4,3] },
+        { label: 'Ash',      data: aData, borderColor: 'var(--ash)',   backgroundColor: 'transparent', tension: 0.4, pointRadius: 2, borderDash: [4,3] },
+      ]
+    },
+    options: {
+      ...chartOpts(),
+      plugins: { ...chartOpts().plugins, legend: { display: true, labels: { color: '#9a9590', font: { size: 11 }, boxWidth: 10 } } }
+    }
+  });
+}
+
+// ─── 12-MONTH PROJECTION ENGINE ───────────────────────────────────────────────
+
+function switchProjectionView(view, btn) {
+  projectionView = view;
+  document.querySelectorAll('#proj-btn-joint,#proj-btn-henry,#proj-btn-ash')
+    .forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderProjectionChart();
+}
+
+function buildProjection(viewMode) {
+  // Get starting balances
+  const henryCurrent = accounts.find(a => a.owner === 'Henry' && a.type === 'current')?.balance || 0;
+  const henrySavings = accounts.find(a => a.owner === 'Henry' && a.type === 'savings')?.balance || 0;
+  const ashCurrent   = accounts.find(a => a.owner === 'Ash'   && a.type === 'current')?.balance || 0;
+  const ashSavings   = accounts.find(a => a.owner === 'Ash'   && a.type === 'savings')?.balance || 0;
+
+  // Monthly income (take-home)
+  let henryIncome = 0, ashIncome = 0;
+  if (salaries['Henry']) {
+    const t = calcUKTax(salaries['Henry'].gross_salary, salaries['Henry'].pension_percent, salaries['Henry'].student_loan_plan);
+    henryIncome = t.netMonthly;
+  }
+  if (salaries['Ash']) {
+    const t = calcUKTax(salaries['Ash'].gross_salary, salaries['Ash'].pension_percent, salaries['Ash'].student_loan_plan);
+    ashIncome = t.netMonthly;
+  }
+
+  const savAmt = getSavingsAmounts();
+  const all = getMergedForecast();
+
+  // Monthly outgoings per person (excluding savings category)
+  let henryOut = 0, ashOut = 0, jointOut = 0;
+  all.filter(i => i.category !== 'Savings').forEach(i => {
+    const mo = toMonthly(i.amount, i.frequency);
+    if (i.owner === 'Henry') henryOut += mo;
+    else if (i.owner === 'Ash') ashOut += mo;
+    else jointOut += mo;
+  });
+
+  // Joint costs split 50/50
+  henryOut += jointOut / 2;
+  ashOut   += jointOut / 2;
+
+  // Monthly net to current after savings transfer
+  const henryNetCurrent = henryIncome - henryOut - savAmt.henry;
+  const ashNetCurrent   = ashIncome   - ashOut   - savAmt.ash;
+
+  // Build 12 months
+  const months = [], currentData = [], savingsData = [];
+  const now = new Date();
+
+  let hCur = henryCurrent, hSav = henrySavings;
+  let aCur = ashCurrent,   aSav = ashSavings;
+
+  for (let i = 1; i <= 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    months.push(d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }));
+
+    hCur += henryNetCurrent;
+    hSav += savAmt.henry;
+    aCur += ashNetCurrent;
+    aSav += savAmt.ash;
+
+    if (viewMode === 'henry') {
+      currentData.push(Math.round(hCur));
+      savingsData.push(Math.round(hSav));
+    } else if (viewMode === 'ash') {
+      currentData.push(Math.round(aCur));
+      savingsData.push(Math.round(aSav));
+    } else {
+      currentData.push(Math.round(hCur + aCur));
+      savingsData.push(Math.round(hSav + aSav));
+    }
+  }
+
+  return { months, currentData, savingsData, henryNetCurrent, ashNetCurrent, savAmt };
+}
+
+function renderProjectionChart() {
+  const { months, currentData, savingsData, henryNetCurrent, ashNetCurrent, savAmt } = buildProjection(projectionView);
+
+  // Summary chips
+  let monthlySurplus, monthlySavings, yearEndSavings;
+  if (projectionView === 'henry') {
+    monthlySurplus = henryNetCurrent;
+    monthlySavings = savAmt.henry;
+  } else if (projectionView === 'ash') {
+    monthlySurplus = ashNetCurrent;
+    monthlySavings = savAmt.ash;
+  } else {
+    monthlySurplus = henryNetCurrent + ashNetCurrent;
+    monthlySavings = savAmt.henry + savAmt.ash;
+  }
+  yearEndSavings = savingsData[savingsData.length - 1] || 0;
+  const yearEndCurrent = currentData[currentData.length - 1] || 0;
+
+  document.getElementById('proj-summary').innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.7rem;text-align:center">
+      <div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem">Monthly surplus</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.95rem;color:${monthlySurplus >= 0 ? 'var(--accent3)' : 'var(--danger)'}">${fmt(monthlySurplus)}</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.7rem;text-align:center">
+      <div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem">Saving/mo</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.95rem;color:var(--accent3)">${fmt(monthlySavings)}</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.7rem;text-align:center">
+      <div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem">Savings in 12mo</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.95rem;color:var(--accent)">${fmt(yearEndSavings)}</div>
+    </div>`;
+
+  if (charts.projection) charts.projection.destroy();
+  const ctx = document.getElementById('projection-chart')?.getContext('2d');
+  if (!ctx) return;
+
+  charts.projection = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [
+        {
+          label: 'Current account',
+          data: currentData,
+          borderColor: 'var(--henry)',
+          backgroundColor: 'rgba(126,184,212,0.08)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 3,
+          borderDash: [6, 3],
+        },
+        {
+          label: 'Savings account',
+          data: savingsData,
+          borderColor: 'var(--accent3)',
+          backgroundColor: 'rgba(168,213,162,0.08)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 3,
+          borderDash: [6, 3],
+        },
+      ]
+    },
+    options: {
+      ...chartOpts(),
+      plugins: {
+        ...chartOpts().plugins,
+        legend: { display: true, labels: { color: '#9a9590', font: { size: 11 }, boxWidth: 10 } },
+        tooltip: {
+          backgroundColor: '#1c2030',
+          callbacks: {
+            label: ctx => ' ' + ctx.dataset.label + ': ' + fmt(ctx.raw)
+          }
+        }
+      }
+    }
+  });
 }
 
 // ─── AUTO-LOGIN ─────────────────────────────────────────────────────────────
