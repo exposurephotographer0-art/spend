@@ -38,7 +38,7 @@
     font-family: 'DM Sans', sans-serif;
     min-height: 100vh;
     min-height: 100dvh;
-    overflow-x: hidden;
+    
   }
 
   /* ── LOGIN ─────────────────────────────────────────────────────── */
@@ -179,21 +179,27 @@
     background: var(--surface);
     border-top: 1px solid var(--border);
     display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     z-index: 100;
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   }
 
+  .bottom-nav::-webkit-scrollbar { display: none; }
+
   .nav-item {
-    flex: 1;
+    flex: 0 0 auto;
+    min-width: 72px;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.2rem;
-    padding: 0.6rem 0.3rem;
+    padding: 0.6rem 0.5rem;
     cursor: pointer;
     color: var(--text3);
     transition: color 0.2s;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 500;
     border: none;
     background: none;
@@ -900,6 +906,108 @@
         </div>
       </div>
     </div>
+
+    <!-- ACCOUNTS -->
+    <div id="page-accounts" class="page">
+      <div class="section-header">
+        <div class="section-title">Account Balances</div>
+        <div style="font-size:0.75rem;color:var(--text3)">Tap to edit</div>
+      </div>
+
+      <div class="card" style="margin-bottom:1rem">
+        <div class="card-title" style="color:var(--henry)">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          Henry
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem">
+          <div class="form-group">
+            <label class="form-label">💳 Current Account</label>
+            <div style="position:relative">
+              <span style="position:absolute;left:0.8rem;top:50%;transform:translateY(-50%);color:var(--text2);font-family:'DM Mono',monospace">£</span>
+              <input type="number" id="bal-henry-current" placeholder="0.00" step="0.01" style="padding-left:1.6rem" onchange="saveAccountBalance('henry','current')">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">🏦 Savings Account</label>
+            <div style="position:relative">
+              <span style="position:absolute;left:0.8rem;top:50%;transform:translateY(-50%);color:var(--text2);font-family:'DM Mono',monospace">£</span>
+              <input type="number" id="bal-henry-savings" placeholder="0.00" step="0.01" style="padding-left:1.6rem" onchange="saveAccountBalance('henry','savings')">
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:0.82rem;color:var(--text2)">Henry's Total</span>
+          <span id="henry-total" style="font-family:'DM Mono',monospace;font-size:1.1rem;color:var(--henry)">£0</span>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:1rem">
+        <div class="card-title" style="color:var(--ash)">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          Ash
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem">
+          <div class="form-group">
+            <label class="form-label">💳 Current Account</label>
+            <div style="position:relative">
+              <span style="position:absolute;left:0.8rem;top:50%;transform:translateY(-50%);color:var(--text2);font-family:'DM Mono',monospace">£</span>
+              <input type="number" id="bal-ash-current" placeholder="0.00" step="0.01" style="padding-left:1.6rem" onchange="saveAccountBalance('ash','current')">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">🏦 Savings Account</label>
+            <div style="position:relative">
+              <span style="position:absolute;left:0.8rem;top:50%;transform:translateY(-50%);color:var(--text2);font-family:'DM Mono',monospace">£</span>
+              <input type="number" id="bal-ash-savings" placeholder="0.00" step="0.01" style="padding-left:1.6rem" onchange="saveAccountBalance('ash','savings')">
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:0.82rem;color:var(--text2)">Ash's Total</span>
+          <span id="ash-total" style="font-family:'DM Mono',monospace;font-size:1.1rem;color:var(--ash)">£0</span>
+        </div>
+      </div>
+
+      <div class="nw-card">
+        <div class="nw-label">Combined Savings</div>
+        <div id="combined-savings" class="nw-amount">£0</div>
+        <div style="margin-top:0.5rem;font-size:0.78rem;color:var(--text2)" id="last-updated-accounts"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Savings Split</div>
+        <div class="chart-wrap" style="height:160px">
+          <canvas id="accounts-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORECAST -->
+    <div id="page-forecast" class="page">
+      <div class="section-header">
+        <div class="section-title">Monthly Forecast</div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('forecast-modal')">+ Add</button>
+      </div>
+
+      <div id="forecast-summary-row" class="stat-row"></div>
+
+      <div class="card">
+        <div class="card-title">Projected vs Actual (This Month)</div>
+        <div class="chart-wrap">
+          <canvas id="forecast-chart"></canvas>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchForecastTab('all',this)">All</button>
+        <button class="tab-btn" onclick="switchForecastTab('Henry',this)">Henry</button>
+        <button class="tab-btn" onclick="switchForecastTab('Ash',this)">Ash</button>
+        <button class="tab-btn" onclick="switchForecastTab('joint',this)">Joint</button>
+      </div>
+
+      <div id="forecast-list"></div>
+    </div>
+
   </div>
 
   <!-- BOTTOM NAV -->
@@ -924,11 +1032,67 @@
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
       Salary
     </button>
+    <button class="nav-item" onclick="showPage('accounts')">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+      Accounts
+    </button>
+    <button class="nav-item" onclick="showPage('forecast')">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-6"/></svg>
+      Forecast
+    </button>
   </nav>
 </div>
 
 <!-- TOAST -->
 <div id="toast"></div>
+
+<!-- Forecast Modal -->
+<div id="forecast-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Projected Cost</div>
+      <button class="close-btn" onclick="closeModal('forecast-modal')">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group form-col-2">
+        <label class="form-label">Description</label>
+        <input type="text" id="fc-name" placeholder="e.g. Netflix, Car Insurance">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select id="fc-category"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Assigned To</label>
+        <select id="fc-owner">
+          <option value="Henry">Henry</option>
+          <option value="Ash">Ash</option>
+          <option value="joint">Joint</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Monthly Amount (£)</label>
+        <input type="number" id="fc-amount" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Frequency</label>
+        <select id="fc-frequency">
+          <option value="monthly">Monthly</option>
+          <option value="annual">Annual (÷12)</option>
+          <option value="quarterly">Quarterly (÷3)</option>
+          <option value="weekly">Weekly (×4.33)</option>
+        </select>
+      </div>
+      <div class="form-group form-col-2">
+        <label class="form-label">Notes</label>
+        <input type="text" id="fc-notes" placeholder="Optional">
+      </div>
+    </div>
+    <div style="margin-top:1rem;display:flex;gap:0.5rem">
+      <button class="btn btn-primary" onclick="submitForecast()">Save</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── MODALS ────────────────────────────────────────────────────────── -->
 
@@ -1217,6 +1381,8 @@ async function showApp() {
   populateCategorySelects();
   await ensureDefaultAccounts();
   await Promise.all([loadDashboard(), loadMortgage(), loadSalaries()]);
+  // Pre-load forecast items from localStorage
+  forecastItems = loadForecastFromStorage();
 }
 
 async function ensureDefaultAccounts() {
@@ -1257,13 +1423,18 @@ function showPage(name) {
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById(`page-${name}`).classList.add('active');
   const navBtns = document.querySelectorAll('.nav-item');
-  const pages = ['dashboard','transactions','budgets','mortgage','salary'];
-  navBtns[pages.indexOf(name)]?.classList.add('active');
-
+  const pages = ['dashboard','transactions','budgets','mortgage','salary','accounts','forecast'];
+  const idx = pages.indexOf(name);
+  if (idx >= 0) {
+    navBtns[idx]?.classList.add('active');
+    navBtns[idx]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
   if (name === 'transactions') loadTransactions();
   if (name === 'budgets') loadBudgets();
   if (name === 'mortgage') renderMortgage();
   if (name === 'salary') renderSalary(currentSalaryOwner);
+  if (name === 'accounts') loadAccountsPage();
+  if (name === 'forecast') loadForecast();
 }
 
 // ─── MODALS ────────────────────────────────────────────────────────────────
@@ -1939,6 +2110,283 @@ function chartOpts() {
       y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5c5850', font: { size: 11 }, callback: v => '£' + Math.round(v).toLocaleString('en-GB') } }
     }
   };
+}
+
+// ─── ACCOUNTS PAGE ────────────────────────────────────────────────────────────
+async function loadAccountsPage() {
+  // Refresh accounts from API
+  accounts = await api('/api/accounts') || [];
+  populateAccountSelect();
+
+  // Map accounts to inputs
+  for (const a of accounts) {
+    const key = `${a.owner.toLowerCase()}-${a.type}`;
+    const el = document.getElementById(`bal-${key}`);
+    if (el) el.value = a.balance || '';
+  }
+  updateAccountTotals();
+  renderAccountsSplitChart();
+
+  // Also populate forecast category dropdown
+  const cats = ['<option value="">All categories</option>'];
+  document.getElementById('fc-category').innerHTML =
+    ['Car','Hobbies','Bills','Social','Entertainment','Eating Out','Shopping','Mortgage','Sports','Health','Travel','Subscriptions','Childcare','Insurance','Other']
+    .map(c => `<option value="${c}">${CAT_MAP[c] || '📦'} ${c}</option>`).join('');
+}
+
+function updateAccountTotals() {
+  const hc = parseFloat(document.getElementById('bal-henry-current')?.value) || 0;
+  const hs = parseFloat(document.getElementById('bal-henry-savings')?.value) || 0;
+  const ac = parseFloat(document.getElementById('bal-ash-current')?.value) || 0;
+  const as_ = parseFloat(document.getElementById('bal-ash-savings')?.value) || 0;
+  document.getElementById('henry-total').textContent = fmt(hc + hs);
+  document.getElementById('ash-total').textContent = fmt(ac + as_);
+  document.getElementById('combined-savings').textContent = fmt(hc + hs + ac + as_);
+  const now = new Date();
+  document.getElementById('last-updated-accounts').textContent =
+    'Last updated: ' + now.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+async function saveAccountBalance(owner, type) {
+  const key = `${owner}-${type}`;
+  const val = parseFloat(document.getElementById(`bal-${key}`)?.value) || 0;
+  const ownerName = owner.charAt(0).toUpperCase() + owner.slice(1);
+  const acc = accounts.find(a => a.owner === ownerName && a.type === type);
+  if (acc) {
+    await api(`/api/accounts/${acc.id}`, 'PUT', { balance: val, name: acc.name });
+    accounts = await api('/api/accounts') || [];
+    toast(`${ownerName}'s ${type} updated ✓`);
+  }
+  updateAccountTotals();
+  renderAccountsSplitChart();
+  // Refresh dashboard net worth too
+  renderAccounts(accounts);
+}
+
+function renderAccountsSplitChart() {
+  const hc = parseFloat(document.getElementById('bal-henry-current')?.value) || 0;
+  const hs = parseFloat(document.getElementById('bal-henry-savings')?.value) || 0;
+  const ac = parseFloat(document.getElementById('bal-ash-current')?.value) || 0;
+  const as_ = parseFloat(document.getElementById('bal-ash-savings')?.value) || 0;
+
+  if (charts.accountsSplit) charts.accountsSplit.destroy();
+  const ctx = document.getElementById('accounts-chart')?.getContext('2d');
+  if (!ctx) return;
+  charts.accountsSplit = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ["Henry Current","Henry Savings","Ash Current","Ash Savings"],
+      datasets: [{
+        data: [hc, hs, ac, as_],
+        backgroundColor: ['rgba(126,184,212,0.8)','rgba(126,184,212,0.4)','rgba(212,160,200,0.8)','rgba(212,160,200,0.4)'],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '60%',
+      plugins: {
+        legend: { position: 'right', labels: { color: '#9a9590', font: { size: 11 }, boxWidth: 12 } },
+        tooltip: {
+          backgroundColor: '#1c2030',
+          callbacks: { label: ctx => ' ' + fmt(ctx.raw) }
+        }
+      }
+    }
+  });
+}
+
+// ─── FORECAST PAGE ─────────────────────────────────────────────────────────────
+let forecastItems = [];
+let forecastTab = 'all';
+
+const FORECAST_STORAGE_KEY = 'ha_forecast_v1';
+
+function loadForecastFromStorage() {
+  try {
+    const raw = localStorage.getItem(FORECAST_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveForecastToStorage(items) {
+  localStorage.setItem(FORECAST_STORAGE_KEY, JSON.stringify(items));
+}
+
+async function loadForecast() {
+  forecastItems = loadForecastFromStorage();
+
+  // Populate category select
+  document.getElementById('fc-category').innerHTML =
+    ['Car','Hobbies','Bills','Social','Entertainment','Eating Out','Shopping','Mortgage','Sports','Health','Travel','Subscriptions','Childcare','Insurance','Other']
+    .map(c => `<option value="${c}">${CAT_MAP[c] || '📦'} ${c}</option>`).join('');
+
+  // Get this month's actual spending for comparison
+  const month = new Date().toISOString().slice(0, 7);
+  const stats = await api(`/api/stats?month=${month}`) || {};
+  const actual = {};
+  (stats.byCategory || []).filter(r => r.type === 'expense').forEach(r => {
+    actual[r.category] = (actual[r.category] || 0) + r.total;
+  });
+
+  renderForecastSummary(actual);
+  renderForecastChart(actual);
+  renderForecastList(actual);
+}
+
+function toMonthly(amount, frequency) {
+  if (frequency === 'annual') return amount / 12;
+  if (frequency === 'quarterly') return amount / 3;
+  if (frequency === 'weekly') return amount * 4.33;
+  return amount; // monthly
+}
+
+function renderForecastSummary(actual) {
+  const visible = forecastItems.filter(i => forecastTab === 'all' || i.owner === forecastTab);
+  const projected = visible.reduce((s, i) => s + toMonthly(i.amount, i.frequency), 0);
+  const totalActual = Object.values(actual).reduce((s, v) => s + v, 0);
+  const diff = projected - totalActual;
+
+  document.getElementById('forecast-summary-row').innerHTML = `
+    <div class="stat-chip">
+      <div class="stat-label">Projected</div>
+      <div class="stat-value">${fmt(projected)}</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-label">Actual (this month)</div>
+      <div class="stat-value">${fmt(totalActual)}</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-label">${diff >= 0 ? 'Over by' : 'Under by'}</div>
+      <div class="stat-value ${diff >= 0 ? 'negative' : 'positive'}">${fmt(Math.abs(diff))}</div>
+    </div>`;
+}
+
+function renderForecastChart(actual) {
+  // Group forecast by category
+  const projByCat = {};
+  forecastItems.forEach(i => {
+    projByCat[i.category] = (projByCat[i.category] || 0) + toMonthly(i.amount, i.frequency);
+  });
+
+  const allCats = [...new Set([...Object.keys(projByCat), ...Object.keys(actual)])];
+  const projected = allCats.map(c => projByCat[c] || 0);
+  const actuals = allCats.map(c => actual[c] || 0);
+
+  if (charts.forecast) charts.forecast.destroy();
+  const ctx = document.getElementById('forecast-chart')?.getContext('2d');
+  if (!ctx) return;
+  charts.forecast = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: allCats,
+      datasets: [
+        { label: 'Projected', data: projected, backgroundColor: 'rgba(200,169,110,0.6)', borderRadius: 4 },
+        { label: 'Actual', data: actuals, backgroundColor: 'rgba(126,184,212,0.6)', borderRadius: 4 },
+      ]
+    },
+    options: {
+      ...chartOpts(),
+      plugins: {
+        ...chartOpts().plugins,
+        legend: { display: true, labels: { color: '#9a9590', font: { size: 11 }, boxWidth: 12 } }
+      }
+    }
+  });
+}
+
+function renderForecastList(actual) {
+  const visible = forecastTab === 'all'
+    ? forecastItems
+    : forecastItems.filter(i => i.owner === forecastTab);
+
+  const el = document.getElementById('forecast-list');
+  if (!visible.length) {
+    el.innerHTML = '<div class="loading">No projected costs yet. Tap + Add to get started.</div>';
+    return;
+  }
+
+  // Group by category
+  const byCategory = {};
+  visible.forEach(item => {
+    if (!byCategory[item.category]) byCategory[item.category] = [];
+    byCategory[item.category].push(item);
+  });
+
+  el.innerHTML = Object.entries(byCategory).map(([cat, items]) => {
+    const catTotal = items.reduce((s, i) => s + toMonthly(i.amount, i.frequency), 0);
+    const actualSpend = actual[cat] || 0;
+    const pct = catTotal > 0 ? Math.min((actualSpend / catTotal) * 100, 100) : 0;
+    const over = actualSpend > catTotal;
+    const barColor = over ? 'var(--danger)' : pct > 80 ? '#f0c080' : 'var(--accent3)';
+
+    return `<div class="card" style="margin-bottom:0.8rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
+        <div style="font-weight:600;font-size:0.92rem">${CAT_MAP[cat] || '📦'} ${cat}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.82rem;color:${barColor}">${fmt(actualSpend)} / ${fmt(catTotal)}</div>
+      </div>
+      <div class="progress-bar" style="margin-bottom:0.8rem">
+        <div class="progress-fill" style="width:${pct}%;background:${barColor}"></div>
+      </div>
+      ${items.map(item => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0;border-top:1px solid var(--border)">
+          <div>
+            <div style="font-size:0.85rem;color:var(--text)">${item.name}</div>
+            <div style="font-size:0.72rem;color:var(--text3);margin-top:0.1rem">
+              ${item.owner} · ${item.frequency}${item.notes ? ' · ' + item.notes : ''}
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.6rem">
+            <div style="text-align:right">
+              <div style="font-family:'DM Mono',monospace;font-size:0.88rem;color:var(--accent)">${fmt(toMonthly(item.amount, item.frequency))}<span style="font-size:0.7rem;color:var(--text3)">/mo</span></div>
+              ${item.frequency !== 'monthly' ? `<div style="font-size:0.72rem;color:var(--text3)">${fmt(item.amount)} ${item.frequency}</div>` : ''}
+            </div>
+            <button onclick="deleteForecastItem(${item.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:1rem;padding:0.2rem">🗑</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function switchForecastTab(tab, btn) {
+  forecastTab = tab;
+  btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadForecast();
+}
+
+async function submitForecast() {
+  const name = document.getElementById('fc-name').value.trim();
+  const amount = parseFloat(document.getElementById('fc-amount').value);
+  if (!name) { toast('Enter a description', true); return; }
+  if (!amount || amount <= 0) { toast('Enter a valid amount', true); return; }
+
+  const item = {
+    id: Date.now(),
+    name,
+    category: document.getElementById('fc-category').value,
+    owner: document.getElementById('fc-owner').value,
+    amount,
+    frequency: document.getElementById('fc-frequency').value,
+    notes: document.getElementById('fc-notes').value.trim(),
+  };
+
+  forecastItems.push(item);
+  saveForecastToStorage(forecastItems);
+  closeModal('forecast-modal');
+  toast('Forecast item added ✓');
+  document.getElementById('fc-name').value = '';
+  document.getElementById('fc-amount').value = '';
+  document.getElementById('fc-notes').value = '';
+  loadForecast();
+}
+
+function deleteForecastItem(id) {
+  forecastItems = forecastItems.filter(i => i.id !== id);
+  saveForecastToStorage(forecastItems);
+  toast('Removed');
+  loadForecast();
 }
 
 // ─── AUTO-LOGIN ─────────────────────────────────────────────────────────────
