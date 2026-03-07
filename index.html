@@ -11,20 +11,20 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #0d0f14;
-    --surface: #14171f;
-    --surface2: #1c2030;
-    --surface3: #242840;
-    --border: rgba(255,255,255,0.07);
-    --accent: #c8a96e;
-    --accent2: #7eb8d4;
-    --accent3: #a8d5a2;
-    --danger: #e07070;
-    --text: #e8e4dc;
-    --text2: #9a9590;
-    --text3: #5c5850;
-    --henry: #7eb8d4;
-    --ash: #d4a0c8;
+    --bg: #13161e;
+    --surface: #1e2235;
+    --surface2: #252a40;
+    --surface3: #2e3450;
+    --border: rgba(255,255,255,0.10);
+    --accent: #e8b96a;
+    --accent2: #5ec4f0;
+    --accent3: #6ddba8;
+    --danger: #f07878;
+    --text: #f0eee8;
+    --text2: #a8a4a0;
+    --text3: #6a6660;
+    --henry: #5ec4f0;
+    --ash: #e890d8;
     --radius: 16px;
     --radius-sm: 10px;
     font-size: 16px;
@@ -49,7 +49,7 @@
     justify-content: center;
     min-height: 100dvh;
     padding: 2rem;
-    background: radial-gradient(ellipse at 50% 40%, #1a1f2e 0%, #0d0f14 70%);
+    background: radial-gradient(ellipse at 50% 40%, #1e2640 0%, #13161e 70%);
   }
 
   .login-logo {
@@ -782,6 +782,7 @@
       <div class="nw-card">
         <div class="nw-label">Total Net Worth</div>
         <div class="nw-amount" id="net-worth">£0</div>
+        <div id="nw-sub" style="margin-top:0.4rem;font-size:0.8rem;color:rgba(232,185,106,0.6);letter-spacing:0.05em"></div>
       </div>
 
       <div id="accounts-grid" class="accounts-grid"></div>
@@ -802,12 +803,19 @@
         <div class="chart-wrap-tall">
           <canvas id="projection-chart"></canvas>
         </div>
-        <div style="margin-top:0.5rem;font-size:0.72rem;color:var(--text3);text-align:center">Based on forecast costs & salary take-home. Dashed = projection.</div>
+        <div style="margin-top:0.5rem;font-size:0.72rem;color:var(--text3);text-align:center">Based on forecast costs & salary take-home.</div>
       </div>
 
+      <!-- Income vs Spending chart - nicer gradient area chart -->
       <div class="card">
-        <div class="card-title">Monthly Cash Flow (Historical)</div>
-        <div class="chart-wrap">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.3rem">
+          <div class="card-title" style="margin:0">Cash Flow</div>
+          <div style="display:flex;gap:1rem;font-size:0.72rem;color:var(--text2)">
+            <span style="display:flex;align-items:center;gap:0.3rem"><span style="width:10px;height:3px;background:var(--accent3);border-radius:2px;display:inline-block"></span>Income</span>
+            <span style="display:flex;align-items:center;gap:0.3rem"><span style="width:10px;height:3px;background:var(--danger);border-radius:2px;display:inline-block"></span>Expenses</span>
+          </div>
+        </div>
+        <div class="chart-wrap-tall" style="height:220px">
           <canvas id="cashflow-chart"></canvas>
         </div>
       </div>
@@ -1454,7 +1462,7 @@ const CATEGORIES = [
 ];
 
 const CAT_MAP = Object.fromEntries(CATEGORIES.map(c => [c.name, c.icon]));
-const CAT_COLORS = ['#c8a96e','#7eb8d4','#a8d5a2','#d4a0c8','#e07070','#f0c080','#80c0d0','#d08080','#90d090','#b090d0','#e0a060','#70b8d0','#c0d080','#d0a0b0','#a0a0c0'];
+const CAT_COLORS = ['#e8b96a','#5ec4f0','#6ddba8','#e890d8','#f07878','#f5c842','#58d8e8','#f09060','#70e090','#c088f0','#e8a040','#50c8f0','#d0e870','#e8a0c0','#a0b0e0'];
 
 let token = localStorage.getItem('ha_token') || '';
 let currentTxType = 'expense';
@@ -1698,22 +1706,100 @@ function renderCashflowChart(monthly) {
   const expenses = months.map(m =>
     monthly.filter(x => x.month === m && x.type === 'expense').reduce((s, r) => s + r.total, 0)
   );
+  const nets = incomes.map((inc, i) => Math.round(inc - expenses[i]));
 
   if (charts.cashflow) charts.cashflow.destroy();
   const ctx = document.getElementById('cashflow-chart').getContext('2d');
+
+  // Gradient fills
+  const gIncome = ctx.createLinearGradient(0, 0, 0, 220);
+  gIncome.addColorStop(0, 'rgba(109,219,168,0.45)');
+  gIncome.addColorStop(1, 'rgba(109,219,168,0.03)');
+
+  const gExpense = ctx.createLinearGradient(0, 0, 0, 220);
+  gExpense.addColorStop(0, 'rgba(240,120,120,0.35)');
+  gExpense.addColorStop(1, 'rgba(240,120,120,0.02)');
+
   charts.cashflow = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
     data: {
       labels: months.map(m => {
         const [y, mo] = m.split('-');
         return new Date(y, mo - 1).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
       }),
       datasets: [
-        { label: 'Income', data: incomes, backgroundColor: 'rgba(168,213,162,0.7)', borderRadius: 6 },
-        { label: 'Expenses', data: expenses, backgroundColor: 'rgba(224,112,112,0.7)', borderRadius: 6 },
+        {
+          label: 'Income',
+          data: incomes,
+          borderColor: 'rgba(109,219,168,0.9)',
+          backgroundColor: gIncome,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4,
+          pointBackgroundColor: 'rgba(109,219,168,1)',
+          pointBorderColor: 'rgba(109,219,168,0.3)',
+          pointBorderWidth: 3,
+          borderWidth: 2.5,
+        },
+        {
+          label: 'Expenses',
+          data: expenses,
+          borderColor: 'rgba(240,120,120,0.9)',
+          backgroundColor: gExpense,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4,
+          pointBackgroundColor: 'rgba(240,120,120,1)',
+          pointBorderColor: 'rgba(240,120,120,0.3)',
+          pointBorderWidth: 3,
+          borderWidth: 2.5,
+        },
+        {
+          label: 'Net',
+          data: nets,
+          borderColor: 'rgba(232,185,106,0.85)',
+          backgroundColor: 'transparent',
+          fill: false,
+          tension: 0.4,
+          pointRadius: 3,
+          pointBackgroundColor: 'rgba(232,185,106,1)',
+          borderWidth: 2,
+          borderDash: [5, 4],
+        },
       ]
     },
-    options: chartOpts()
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#252a40',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: '#f0eee8',
+          bodyColor: '#a8a4a0',
+          padding: 10,
+          callbacks: {
+            label: ctx => {
+              const sign = ctx.datasetIndex === 2 && ctx.raw < 0 ? '' : '';
+              return ` ${ctx.dataset.label}: £${Math.round(ctx.raw).toLocaleString('en-GB')}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#6a6660', font: { size: 11 } }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#6a6660', font: { size: 11 }, callback: v => '£' + Math.round(v).toLocaleString('en-GB') }
+        }
+      }
+    }
   });
 }
 
@@ -1850,17 +1936,20 @@ function renderTxForecastView(txs, filterOwner, filterMonth) {
         const isConfirmed = confirmedTxs.length > 0;
         // Safe JSON for onclick - use data attribute approach
         const safeItem = JSON.stringify(item).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        // Show real payment amount — for annual/quarterly show the actual lump sum, not monthly equivalent
+        const displayAmt = item.amount;
+        const amtLabel = item.frequency === 'monthly' ? fmt(item.amount)
+          : `${fmt(item.amount)} (${freqLabel(item.frequency)})`;
         return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;border-bottom:1px solid var(--border)">
           <div style="font-size:1rem">${isConfirmed ? '✅' : '⬜'}</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:0.85rem;color:${isConfirmed ? 'var(--text3)' : 'var(--text)'};${isConfirmed ? 'text-decoration:line-through' : ''}">${item.name}</div>
-            <div style="font-size:0.7rem;color:${ownerCol}">${item.owner} · ${freqLabel(item.frequency)}${item.payment_day ? ' · due ' + item.payment_day + ordinal(item.payment_day) : ''}${item.annual_date ? ' · ' + item.annual_date : ''}</div>
+            <div style="font-size:0.7rem;color:${ownerCol}">${item.owner} · ${amtLabel}${item.payment_day ? ' · due ' + item.payment_day + ordinal(item.payment_day) : ''}${item.annual_date ? ' · ' + item.annual_date : ''}</div>
             ${isConfirmed ? `<div style="font-size:0.68rem;color:var(--text3);margin-top:0.1rem">Matched: ${confirmedTxs.map(t => t.description || t.category).join(', ')}</div>` : ''}
           </div>
-          <div style="font-family:'DM Mono',monospace;font-size:0.85rem;color:var(--text2)">${fmt(monthly)}</div>
           ${isConfirmed
-            ? `<div style="font-size:0.72rem;color:var(--accent3);padding:0.2rem 0.5rem;background:rgba(168,213,162,0.15);border-radius:6px">paid</div>`
-            : `<button onclick='openConfirmForecast(${safeItem})' style="background:rgba(168,213,162,0.15);border:1px solid rgba(168,213,162,0.4);color:var(--accent3);cursor:pointer;padding:0.25rem 0.6rem;border-radius:6px;font-size:0.78rem;font-weight:600;white-space:nowrap">✓ Confirm</button>`
+            ? `<div style="font-size:0.72rem;color:var(--accent3);padding:0.2rem 0.5rem;background:rgba(109,219,168,0.12);border-radius:6px">paid</div>`
+            : `<button onclick='confirmForecastItem(${safeItem})' style="background:rgba(109,219,168,0.15);border:1px solid rgba(109,219,168,0.4);color:var(--accent3);cursor:pointer;padding:0.25rem 0.6rem;border-radius:6px;font-size:0.78rem;font-weight:600;white-space:nowrap">✓ Confirm</button>`
           }
         </div>`;
       }).join('')}
@@ -1890,54 +1979,40 @@ function renderTxForecastView(txs, filterOwner, filterMonth) {
 }
 
 // ─── CONFIRM FORECAST ITEM ──────────────────────────────────────────────────
-function openConfirmForecast(item) {
-  // item may arrive as object (from forecast tab) or be already parsed
+// One-click confirm — no modal. Saves the transaction immediately using the
+// forecast item's own amount (not divided to monthly) and today's date.
+async function confirmForecastItem(item) {
   if (typeof item === 'string') item = JSON.parse(item);
-  const monthly = toMonthly(item.amount, item.frequency);
-  document.getElementById('cfc-name-display').textContent = item.name;
-  document.getElementById('cfc-meta-display').textContent =
-    `${item.owner} · ${item.category} · ${freqLabel(item.frequency)} · ${fmt(monthly)}/mo`;
-  document.getElementById('cfc-amount').value = monthly.toFixed(2);
-  document.getElementById('cfc-date').value = new Date().toISOString().slice(0, 10);
-  document.getElementById('cfc-owner').value = item.owner === 'Joint' ? 'Henry' : item.owner;
-  document.getElementById('cfc-category').value = item.category;
-  document.getElementById('cfc-fc-id').value = item.id;
-  document.getElementById('cfc-note').value = item.name;
 
-  // Populate account dropdown filtered to owner
-  const owner = item.owner === 'Joint' ? '' : item.owner;
-  const accs = accounts.filter(a => a.type === 'current' && (!owner || a.owner === owner));
-  const sel = document.getElementById('cfc-account');
-  sel.innerHTML = accs.map(a => `<option value="${a.id}">${a.owner} · ${a.name}</option>`).join('');
-  if (!accs.length) {
-    sel.innerHTML = accounts.filter(a => a.type === 'current').map(a =>
-      `<option value="${a.id}">${a.owner} · ${a.name}</option>`).join('');
-  }
+  // Use the real payment amount (e.g. £600 for annual car insurance, not £50/mo)
+  const amount = item.amount;
+  const owner = item.owner === 'Joint' ? 'Henry' : item.owner;
 
-  openModal('confirm-fc-modal');
-}
+  // Pick the owner's current account
+  const acc = accounts.find(a => a.type === 'current' && a.owner === owner)
+    || accounts.find(a => a.type === 'current');
 
-async function submitConfirmForecast() {
-  const amount = parseFloat(document.getElementById('cfc-amount').value);
-  if (!amount || amount <= 0) { toast('Enter a valid amount', true); return; }
   const data = {
     type: 'expense',
-    owner: document.getElementById('cfc-owner').value,
+    owner,
     amount,
-    category: document.getElementById('cfc-category').value,
-    description: document.getElementById('cfc-note').value,
-    date: document.getElementById('cfc-date').value,
-    account_id: document.getElementById('cfc-account').value || null,
+    category: item.category,
+    description: item.name,
+    date: new Date().toISOString().slice(0, 10),
+    account_id: acc?.id || null,
     is_recurring: 0,
   };
+
   await api('/api/transactions', 'POST', data);
-  closeModal('confirm-fc-modal');
-  toast('Payment confirmed ✓');
+  toast(`✓ ${item.name} confirmed`);
   loadDashboard();
-  // Refresh transactions if on that page
   if (document.getElementById('page-transactions').classList.contains('active')) loadTransactions();
-  // Refresh forecast actuals if on forecast page
   if (document.getElementById('page-forecast').classList.contains('active')) loadForecast();
+}
+
+// Keep openConfirmForecast as alias for backward compat from forecast page confirm buttons
+function openConfirmForecast(item) {
+  confirmForecastItem(item);
 }
 
 function txHTML(tx, showDelete = false) {
@@ -2547,19 +2622,20 @@ function chartOpts() {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#1c2030',
-        borderColor: 'rgba(255,255,255,0.07)',
+        backgroundColor: '#252a40',
+        borderColor: 'rgba(255,255,255,0.1)',
         borderWidth: 1,
-        titleColor: '#e8e4dc',
-        bodyColor: '#9a9590',
+        titleColor: '#f0eee8',
+        bodyColor: '#a8a4a0',
+        padding: 10,
         callbacks: {
           label: ctx => ' £' + Math.round(ctx.raw).toLocaleString('en-GB')
         }
       }
     },
     scales: {
-      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5c5850', font: { size: 11 } } },
-      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5c5850', font: { size: 11 }, callback: v => '£' + Math.round(v).toLocaleString('en-GB') } }
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6a6660', font: { size: 11 } } },
+      y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6a6660', font: { size: 11 }, callback: v => '£' + Math.round(v).toLocaleString('en-GB') } }
     }
   };
 }
@@ -2641,7 +2717,7 @@ function renderAccountsSplitChart() {
       plugins: {
         legend: { position: 'right', labels: { color: '#9a9590', font: { size: 11 }, boxWidth: 12 } },
         tooltip: {
-          backgroundColor: '#1c2030',
+          backgroundColor: '#252a40',
           callbacks: { label: ctx => ' ' + fmt(ctx.raw) }
         }
       }
@@ -2966,7 +3042,7 @@ function renderForecastList() {
                 <div style="font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--accent)">${fmt(monthly)}<span style="font-size:0.68rem;color:var(--text3)">/mo</span></div>
               </div>
               <div style="display:flex;gap:0.2rem;flex-shrink:0">
-                <button onclick="openConfirmForecast(${JSON.stringify(item).replace(/\\/g,'\\\\').replace(/'/g,"\\'")})" title="Confirm as transaction" style="background:rgba(168,213,162,0.15);border:1px solid rgba(168,213,162,0.4);color:var(--accent3);cursor:pointer;height:26px;border-radius:6px;font-size:0.72rem;padding:0 6px;font-weight:600">✓</button>
+                <button onclick="confirmForecastItem(${JSON.stringify(item).replace(/\\/g,'\\\\').replace(/'/g,"\\'")})" title="Confirm as transaction" style="background:rgba(109,219,168,0.15);border:1px solid rgba(109,219,168,0.4);color:var(--accent3);cursor:pointer;height:26px;border-radius:6px;font-size:0.72rem;padding:0 6px;font-weight:600">✓</button>
                 <button onclick="editForecastItem(${item.id})" style="background:var(--surface3);border:none;color:var(--text2);cursor:pointer;width:26px;height:26px;border-radius:6px;font-size:0.8rem">✏️</button>
                 <button onclick="deleteForecastItem(${item.id})" style="background:var(--surface3);border:none;color:var(--danger);cursor:pointer;width:26px;height:26px;border-radius:6px;font-size:0.8rem">×</button>
               </div>
@@ -3182,7 +3258,7 @@ function renderSavingsProjChart(savAmt, extraItems) {
     data: {
       labels: months,
       datasets: [
-        { label: 'Combined', data: jData, borderColor: 'rgba(168,213,162,0.9)', backgroundColor: 'rgba(168,213,162,0.1)', fill: true, tension: 0.4, pointRadius: 3 },
+        { label: 'Combined', data: jData, borderColor: 'rgba(109,219,168,0.9)', backgroundColor: 'rgba(109,219,168,0.1)', fill: true, tension: 0.4, pointRadius: 3 },
         { label: 'Henry',    data: hData, borderColor: 'var(--henry)', backgroundColor: 'transparent', tension: 0.4, pointRadius: 2, borderDash: [4,3] },
         { label: 'Ash',      data: aData, borderColor: 'var(--ash)',   backgroundColor: 'transparent', tension: 0.4, pointRadius: 2, borderDash: [4,3] },
       ]
@@ -3318,7 +3394,7 @@ function renderProjectionChart() {
           label: 'Current account',
           data: currentData,
           borderColor: 'var(--henry)',
-          backgroundColor: 'rgba(126,184,212,0.08)',
+          backgroundColor: 'rgba(94,196,240,0.08)',
           fill: true,
           tension: 0.4,
           pointRadius: 3,
@@ -3328,7 +3404,7 @@ function renderProjectionChart() {
           label: 'Savings account',
           data: savingsData,
           borderColor: 'var(--accent3)',
-          backgroundColor: 'rgba(168,213,162,0.08)',
+          backgroundColor: 'rgba(109,219,168,0.08)',
           fill: true,
           tension: 0.4,
           pointRadius: 3,
@@ -3342,7 +3418,7 @@ function renderProjectionChart() {
         ...chartOpts().plugins,
         legend: { display: true, labels: { color: '#9a9590', font: { size: 11 }, boxWidth: 10 } },
         tooltip: {
-          backgroundColor: '#1c2030',
+          backgroundColor: '#252a40',
           callbacks: {
             label: ctx => ' ' + ctx.dataset.label + ': ' + fmt(ctx.raw)
           }
