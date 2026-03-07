@@ -780,17 +780,26 @@
   <div class="main-content">
     <!-- DASHBOARD -->
     <div id="page-dashboard" class="page active">
+
+      <!-- Net worth hero -->
       <div class="nw-card">
-        <div class="nw-label">Total Net Worth</div>
-        <div class="nw-amount" id="net-worth">£0</div>
-        <div id="nw-sub" style="margin-top:0.4rem;font-size:0.8rem;color:rgba(232,185,106,0.6);letter-spacing:0.05em"></div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.8rem">
+          <div>
+            <div class="nw-label">Total Net Worth</div>
+            <div class="nw-amount" id="net-worth">£0</div>
+            <div id="nw-sub" style="margin-top:0.3rem;font-size:0.75rem;color:rgba(255,255,255,0.5)"></div>
+          </div>
+          <button onclick="openSnapshotModal()" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:10px;padding:0.5rem 1rem;font-size:0.8rem;cursor:pointer;font-weight:600;white-space:nowrap;font-family:inherit">
+            📸 Record balances
+          </button>
+        </div>
+        <div id="accounts-grid" class="accounts-grid" style="margin-top:1rem"></div>
       </div>
 
-      <div id="accounts-grid" class="accounts-grid"></div>
-
+      <!-- This month stats (forecast-driven) -->
       <div class="stat-row" id="month-stats"></div>
 
-      <!-- 12-month projection -->
+      <!-- 12-month projection with actual overlay -->
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
           <div class="card-title" style="margin:0">12-Month Projection</div>
@@ -804,20 +813,33 @@
         <div class="chart-wrap-tall">
           <canvas id="projection-chart"></canvas>
         </div>
-        <div style="margin-top:0.5rem;font-size:0.72rem;color:var(--text3);text-align:center">Based on forecast costs & salary take-home.</div>
+        <div style="margin-top:0.4rem;font-size:0.7rem;color:var(--text3);text-align:center">
+          Dashed blue = forecast · Orange dots = your recorded actuals
+        </div>
       </div>
 
-      <!-- Spending breakdown - donut + category list -->
+      <!-- Forecast vs Actual history (only shown when snapshots exist) -->
+      <div class="card" id="history-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
+          <div class="card-title" style="margin:0">Forecast vs Actual History</div>
+        </div>
+        <div class="chart-wrap-tall" id="history-chart-wrap" style="display:none">
+          <canvas id="history-chart"></canvas>
+        </div>
+        <div id="history-section"></div>
+      </div>
+
+      <!-- Monthly spending breakdown (forecast-driven donut) -->
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-          <div class="card-title" style="margin:0">This Month</div>
+          <div class="card-title" style="margin:0">Forecast Spending Breakdown</div>
           <div id="cashflow-net-badge" style="font-size:0.78rem;font-weight:600;padding:0.2rem 0.7rem;border-radius:20px"></div>
         </div>
         <div style="display:grid;grid-template-columns:140px 1fr;gap:1rem;align-items:center">
           <div style="position:relative;height:140px">
             <canvas id="cashflow-chart"></canvas>
             <div id="cashflow-center" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
-              <div style="font-size:0.62rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em">spent</div>
+              <div style="font-size:0.6rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em">per month</div>
               <div id="cashflow-total" style="font-family:'DM Mono',monospace;font-size:1rem;font-weight:600;color:var(--text)"></div>
             </div>
           </div>
@@ -825,10 +847,9 @@
         </div>
       </div>
 
+      <!-- Recent transactions -->
       <div class="card">
-        <div class="section-header">
-          <div class="card-title" style="margin:0">Recent Transactions</div>
-        </div>
+        <div class="card-title" style="margin-bottom:0.8rem">Recent Transactions</div>
         <div id="recent-tx" class="tx-list"></div>
       </div>
     </div>
@@ -1158,6 +1179,48 @@
 
 <!-- ── MODALS ────────────────────────────────────────────────────────── -->
 
+<!-- Balance Snapshot Modal -->
+<div id="snapshot-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📸 Record Month-End Balances</div>
+      <button class="close-btn" onclick="closeModal('snapshot-modal')">×</button>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text2);margin-bottom:1.2rem;line-height:1.5">
+      Enter your actual bank balances at the end of a month. The app will compare these against its forecast so you can see where things track or diverge.
+    </p>
+    <div class="form-group" style="margin-bottom:1rem">
+      <label class="form-label">Month</label>
+      <input type="month" id="snap-month">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:1rem">
+      <div class="form-group">
+        <label class="form-label" style="color:var(--henry)">Henry — Current (£)</label>
+        <input type="number" id="snap-henry-current" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="color:var(--henry)">Henry — Savings (£)</label>
+        <input type="number" id="snap-henry-savings" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="color:var(--ash)">Ash — Current (£)</label>
+        <input type="number" id="snap-ash-current" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="color:var(--ash)">Ash — Savings (£)</label>
+        <input type="number" id="snap-ash-savings" placeholder="0.00" step="0.01" min="0">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:1rem">
+      <label class="form-label">Notes (optional)</label>
+      <input type="text" id="snap-notes" placeholder="e.g. bonus month, holiday spending">
+    </div>
+    <div style="display:flex;gap:0.6rem">
+      <button class="btn btn-primary" style="flex:1" onclick="submitSnapshot()">Save balances</button>
+      <button class="btn btn-ghost" onclick="closeModal('snapshot-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <!-- Budget Modal -->
 <div id="budget-modal" class="modal-overlay">
@@ -1282,6 +1345,17 @@
         <input type="number" id="sal-pension" placeholder="5" step="0.5">
       </div>
       <div class="form-group">
+        <label class="form-label">Pay Day (day of month)</label>
+        <select id="sal-payday">
+          <option value="1">1st</option><option value="2">2nd</option><option value="3">3rd</option><option value="4">4th</option><option value="5">5th</option>
+          <option value="6">6th</option><option value="7">7th</option><option value="8">8th</option><option value="9">9th</option><option value="10">10th</option>
+          <option value="11">11th</option><option value="12">12th</option><option value="13">13th</option><option value="14">14th</option><option value="15">15th</option>
+          <option value="16">16th</option><option value="17">17th</option><option value="18">18th</option><option value="19">19th</option><option value="20">20th</option>
+          <option value="21">21st</option><option value="22">22nd</option><option value="23">23rd</option><option value="24">24th</option><option value="25" selected>25th</option>
+          <option value="26">26th</option><option value="27">27th</option><option value="28">28th</option><option value="29">29th</option><option value="30">30th</option><option value="31">Last</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label class="form-label">Student Loan Plan</label>
         <select id="sal-loan">
           <option value="none">None</option>
@@ -1333,6 +1407,7 @@ let salaries = {};
 let mortgageData = null;
 let budgets = [];
 let transactions = [];
+let snapshots = [];  // monthly actual balance history
 
 // ─── AUTH ──────────────────────────────────────────────────────────────────
 async function doLogin() {
@@ -1407,18 +1482,19 @@ async function showApp() {
   populateCategorySelects();
   await ensureDefaultAccounts();
 
-  // Load salary, savings % and forecast FIRST so the dashboard projection has real data
+  // Load everything needed before dashboard renders
   const [, savedPct] = await Promise.all([
     loadSalaries().catch(e => console.warn('loadSalaries:', e)),
-    loadSavingsPctFromDB().catch(() => ({ henry: 10, ash: 10 })),
+    loadSavingsPctFromDB().catch(() => null),
+    loadMortgage().catch(e => console.warn('loadMortgage:', e)),
   ]);
   if (savedPct) _savingsPct = savedPct;
   await loadForecastFromDB().catch(e => console.warn('loadForecast:', e));
 
-  // Now load the rest (dashboard projection will have salary + forecast data)
+  // Now all data is ready — render dashboard
   await Promise.all([
     loadDashboard().catch(e => console.warn('loadDashboard:', e)),
-    loadMortgage().catch(e => console.warn('loadMortgage:', e)),
+    loadSnapshots().catch(e => console.warn('loadSnapshots:', e)),
   ]);
 
   // Restore last active tab from URL hash
@@ -1504,24 +1580,73 @@ function toast(msg, isError = false) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
+// ─── SNAPSHOTS ────────────────────────────────────────────────────────────────
+async function loadSnapshots() {
+  snapshots = await api('/api/snapshots') || [];
+}
+
+async function submitSnapshot() {
+  const month = document.getElementById('snap-month').value;
+  if (!month) { toast('Please select a month', true); return; }
+  const body = {
+    month,
+    henry_current: parseFloat(document.getElementById('snap-henry-current').value) || 0,
+    henry_savings: parseFloat(document.getElementById('snap-henry-savings').value) || 0,
+    ash_current:   parseFloat(document.getElementById('snap-ash-current').value) || 0,
+    ash_savings:   parseFloat(document.getElementById('snap-ash-savings').value) || 0,
+    notes: document.getElementById('snap-notes').value || '',
+  };
+  await api('/api/snapshots', 'POST', body);
+  toast('Balances saved ✓');
+  closeModal('snapshot-modal');
+  await loadSnapshots();
+  renderProjectionChart();  // redraw so actual dots appear
+  renderHistorySection();
+}
+
+async function deleteSnapshot(month) {
+  await api(`/api/snapshots/${encodeURIComponent(month)}`, 'DELETE');
+  toast('Entry deleted');
+  await loadSnapshots();
+  renderProjectionChart();
+  renderHistorySection();
+}
+
+function openSnapshotModal() {
+  // Default to last completed month
+  const now = new Date();
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  document.getElementById('snap-month').value = lastMonth.toISOString().slice(0, 7);
+  // Pre-fill current account balances as a starting point
+  const hc = accounts.find(a => a.owner==='Henry' && a.type==='current')?.balance || 0;
+  const hs = accounts.find(a => a.owner==='Henry' && a.type==='savings')?.balance || 0;
+  const ac = accounts.find(a => a.owner==='Ash'   && a.type==='current')?.balance || 0;
+  const as2 = accounts.find(a => a.owner==='Ash'  && a.type==='savings')?.balance || 0;
+  document.getElementById('snap-henry-current').value = hc || '';
+  document.getElementById('snap-henry-savings').value = hs || '';
+  document.getElementById('snap-ash-current').value   = ac || '';
+  document.getElementById('snap-ash-savings').value   = as2 || '';
+  document.getElementById('snap-notes').value = '';
+  openModal('snapshot-modal');
+}
+
 // ─── DASHBOARD ─────────────────────────────────────────────────────────────
 async function loadDashboard() {
   accounts = await api('/api/accounts') || [];
-  const month = new Date().toISOString().slice(0, 7);
-  const stats = await api(`/api/stats?month=${month}`) || {};
-
   renderAccounts(accounts);
-  renderMonthStats(stats);
-  renderCashflowChart(stats.monthly || [], stats.byCategory || []);
+  renderMonthOverview();
+  renderCashflowChart([], []);   // uses forecast data, no tx needed
   renderProjectionChart();
+  renderHistorySection();
   await loadRecentTx();
 }
 
 function renderAccounts(accs) {
   const grid = document.getElementById('accounts-grid');
-  let total = 0;
+  let totalCurrent = 0, totalSavings = 0;
   grid.innerHTML = accs.map(a => {
-    total += a.balance;
+    if (a.type === 'current') totalCurrent += a.balance;
+    else totalSavings += a.balance;
     const neg = a.balance < 0;
     return `<div class="account-card ${a.owner.toLowerCase()}">
       <div class="account-owner">${a.owner}</div>
@@ -1529,40 +1654,216 @@ function renderAccounts(accs) {
       <div class="account-balance ${neg ? 'negative' : ''}">${fmt(a.balance)}</div>
     </div>`;
   }).join('');
+  const total = totalCurrent + totalSavings;
   document.getElementById('net-worth').textContent = fmt(total);
+  // Mortgage equity sub-label
+  const m = mortgageData?.mortgage;
+  const nwSub = document.getElementById('nw-sub');
+  if (nwSub && m && m.property_value > 0) {
+    const equity = m.property_value - m.loan_amount;
+    nwSub.textContent = `+ ~${fmt(equity)} property equity`;
+  }
 }
 
-function renderMonthStats(stats) {
-  const month = new Date().toISOString().slice(0, 7);
-  const by = stats.byCategory || [];
-  let income = 0, expense = 0;
-  by.forEach(r => {
-    if (r.type === 'income') income += r.total;
-    else expense += r.total;
-  });
-  const net = income - expense;
-  document.getElementById('month-stats').innerHTML = `
+// The main "This Month" stats card — driven purely by forecast + salary data
+function renderMonthOverview() {
+  const el = document.getElementById('month-stats');
+  if (!el) return;
+
+  // Salary take-home
+  let henryNet = 0, ashNet = 0;
+  const hs = salaries['Henry'];
+  const as = salaries['Ash'];
+  if (hs) { const t = calcUKTax(hs.gross_salary, hs.pension_percent, hs.student_loan_plan); henryNet = t.netMonthly; }
+  if (as) { const t = calcUKTax(as.gross_salary, as.pension_percent, as.student_loan_plan); ashNet = t.netMonthly; }
+  const totalIncome = henryNet + ashNet;
+
+  // Forecast outgoings (monthly equiv, all items)
+  const allFc = getMergedForecast();
+  let totalOut = 0;
+  allFc.forEach(i => { totalOut += toMonthly(i.amount, i.frequency); });
+
+  // Mortgage
+  const mortgageMonthly = mortgageData?.mortgage?.monthly_payment || 0;
+
+  // Surplus after all outgoings
+  const surplus = totalIncome - totalOut;
+
+  // Days to next payday (Henry's pay_day as primary indicator)
+  const hPayDay = hs?.pay_day || 25;
+  const aPayDay = as?.pay_day || 25;
+  const today = new Date().getDate();
+  const daysToHenry = hPayDay >= today ? hPayDay - today : (new Date(new Date().getFullYear(), new Date().getMonth() + 1, hPayDay).getDate() + (new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - today));
+
+  el.innerHTML = `
     <div class="stat-chip">
-      <div class="stat-label">Income</div>
-      <div class="stat-value positive">${fmt(income)}</div>
+      <div class="stat-label">💷 Take-home/mo</div>
+      <div class="stat-value positive">${fmt(totalIncome)}</div>
+      <div style="font-size:0.68rem;color:var(--text3);margin-top:0.1rem">H: ${fmt(henryNet)} · A: ${fmt(ashNet)}</div>
     </div>
     <div class="stat-chip">
-      <div class="stat-label">Expenses</div>
-      <div class="stat-value negative">${fmt(expense)}</div>
+      <div class="stat-label">📋 Forecast out</div>
+      <div class="stat-value negative">${fmt(totalOut)}</div>
+      <div style="font-size:0.68rem;color:var(--text3);margin-top:0.1rem">incl. ${fmt(mortgageMonthly)} mortgage</div>
     </div>
     <div class="stat-chip">
-      <div class="stat-label">Net</div>
-      <div class="stat-value ${net >= 0 ? 'positive' : 'negative'}">${fmt(net)}</div>
+      <div class="stat-label">✅ Surplus</div>
+      <div class="stat-value ${surplus >= 0 ? 'positive' : 'negative'}">${fmt(surplus)}</div>
+      <div style="font-size:0.68rem;color:var(--text3);margin-top:0.1rem">per month</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-label">📅 Next payday</div>
+      <div class="stat-value" style="font-size:1rem">${daysToHenry === 0 ? '🎉 Today!' : daysToHenry + ' days'}</div>
+      <div style="font-size:0.68rem;color:var(--text3);margin-top:0.1rem">H: ${ordinalDay(hPayDay)} · A: ${ordinalDay(aPayDay)}</div>
     </div>`;
 }
 
-function renderCashflowChart(monthly, byCategory) {
-  const now = new Date();
-  const curMonth = now.toISOString().slice(0,7);
-  const totalIncome = monthly.filter(x => x.month === curMonth && x.type === 'income').reduce((s,r)=>s+r.total,0);
-  const totalExpense = monthly.filter(x => x.month === curMonth && x.type === 'expense').reduce((s,r)=>s+r.total,0);
-  const net = totalIncome - totalExpense;
+function ordinalDay(n) {
+  if (!n) return '—';
+  const s = ['th','st','nd','rd'];
+  const v = n % 100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
+}
 
+// History section: comparison of forecast vs actual snapshots
+function renderHistorySection() {
+  const el = document.getElementById('history-section');
+  if (!el) return;
+
+  if (!snapshots.length) {
+    el.innerHTML = `<div style="text-align:center;padding:1.5rem;color:var(--text3);font-size:0.85rem">
+      No history yet. Use "Record balances" above to log your month-end balances each month.
+    </div>`;
+    return;
+  }
+
+  // Build comparison data: for each snapshot month, compare actual total vs what forecast predicted
+  const rows = snapshots.slice().reverse().map(snap => {
+    const actual = snap.henry_current + snap.henry_savings + snap.ash_current + snap.ash_savings;
+    // Forecast for that month: project forward/back from current balances using monthly surplus
+    const { henryNetCurrent, ashNetCurrent, savAmt } = buildProjection('joint');
+    const monthlyChange = henryNetCurrent + ashNetCurrent + savAmt.henry + savAmt.ash;
+    const now = new Date();
+    const [sy, sm] = snap.month.split('-').map(Number);
+    const monthsDiff = (now.getFullYear() - sy) * 12 + (now.getMonth() + 1 - sm);
+    const currentTotal = accounts.reduce((s, a) => s + a.balance, 0);
+    const forecast = currentTotal - (monthlyChange * monthsDiff);
+    const diff = actual - forecast;
+
+    return { snap, actual, forecast, diff };
+  });
+
+  const chartWrap = document.getElementById('history-chart-wrap');
+  if (chartWrap) chartWrap.style.display = rows.length >= 2 ? '' : 'none';
+    const [y, m] = r.snap.month.split('-').map(Number);
+    return new Date(y, m-1, 1).toLocaleDateString('en-GB', { month:'short', year:'2-digit' });
+  });
+
+  if (charts.history) { charts.history.destroy(); charts.history = null; }
+  const ctx = document.getElementById('history-chart')?.getContext('2d');
+  if (ctx) {
+    charts.history = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: months,
+        datasets: [
+          {
+            label: 'Actual',
+            data: rows.map(r => Math.round(r.actual)),
+            borderColor: '#1a7fc0',
+            backgroundColor: 'rgba(26,127,192,0.07)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 5,
+            pointBackgroundColor: '#1a7fc0',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            borderWidth: 2.5,
+          },
+          {
+            label: 'Forecast',
+            data: rows.map(r => Math.round(r.forecast)),
+            borderColor: '#9a9eb2',
+            borderDash: [5, 4],
+            backgroundColor: 'transparent',
+            fill: false,
+            tension: 0.3,
+            pointRadius: 3,
+            borderWidth: 1.5,
+          },
+        ]
+      },
+      options: {
+        ...chartOpts(),
+        plugins: {
+          ...chartOpts().plugins,
+          legend: { display: true, labels: { color: '#5a5e72', font: { size: 11 }, boxWidth: 10 } },
+          tooltip: { backgroundColor: '#fff', callbacks: { label: c => ' ' + c.dataset.label + ': ' + fmt(c.raw) } }
+        }
+      }
+    });
+  }
+
+  // Table
+  el.innerHTML = `
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:0.8rem">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border)">
+            <th style="text-align:left;padding:0.5rem 0.4rem;color:var(--text2);font-weight:600">Month</th>
+            <th style="text-align:right;padding:0.5rem 0.4rem;color:var(--henry);font-weight:600">H Current</th>
+            <th style="text-align:right;padding:0.5rem 0.4rem;color:var(--henry);font-weight:600">H Savings</th>
+            <th style="text-align:right;padding:0.5rem 0.4rem;color:var(--ash);font-weight:600">A Current</th>
+            <th style="text-align:right;padding:0.5rem 0.4rem;color:var(--ash);font-weight:600">A Savings</th>
+            <th style="text-align:right;padding:0.5rem 0.4rem;font-weight:600">Total</th>
+            <th style="text-align:right;padding:0.5rem 0.4rem;font-weight:600">vs Forecast</th>
+            <th style="padding:0.5rem 0.4rem"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(({ snap, actual, diff }) => `
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:0.45rem 0.4rem;color:var(--text2);font-weight:500">${snap.month}</td>
+              <td style="padding:0.45rem 0.4rem;text-align:right;font-family:'DM Mono',monospace">${fmt(snap.henry_current)}</td>
+              <td style="padding:0.45rem 0.4rem;text-align:right;font-family:'DM Mono',monospace">${fmt(snap.henry_savings)}</td>
+              <td style="padding:0.45rem 0.4rem;text-align:right;font-family:'DM Mono',monospace">${fmt(snap.ash_current)}</td>
+              <td style="padding:0.45rem 0.4rem;text-align:right;font-family:'DM Mono',monospace">${fmt(snap.ash_savings)}</td>
+              <td style="padding:0.45rem 0.4rem;text-align:right;font-family:'DM Mono',monospace;font-weight:600">${fmt(actual)}</td>
+              <td style="padding:0.45rem 0.4rem;text-align:right;font-family:'DM Mono',monospace;color:${diff >= 0 ? 'var(--accent3)' : 'var(--danger)'}">
+                ${diff >= 0 ? '+' : ''}${fmt(diff)}
+              </td>
+              <td style="padding:0.45rem 0.4rem;text-align:right">
+                <button onclick="deleteSnapshot('${snap.month}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:0.9rem;padding:0">🗑</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+
+// Spending donut — driven by forecast items (not transactions), so always has data
+function renderCashflowChart(monthly, byCategory) {
+  // Group forecast items by category (monthly equivalent)
+  const allFc = getMergedForecast();
+  const catSpend = {};
+  allFc.filter(i => i.category !== 'Savings').forEach(i => {
+    const mo = toMonthly(i.amount, i.frequency);
+    catSpend[i.category] = (catSpend[i.category] || 0) + mo;
+  });
+  const cats = Object.entries(catSpend).sort((a, b) => b[1] - a[1]);
+  const labels = cats.map(c => c[0]);
+  const values = cats.map(c => c[1]);
+  const colors = CAT_COLORS.slice(0, labels.length);
+  const totalFcOut = values.reduce((s, v) => s + v, 0);
+
+  // Income badge
+  let totalIncome = 0;
+  Object.values(salaries).forEach(s => {
+    const t = calcUKTax(s.gross_salary, s.pension_percent, s.student_loan_plan);
+    totalIncome += t.netMonthly;
+  });
+  const net = totalIncome - totalFcOut;
   const badge = document.getElementById('cashflow-net-badge');
   if (badge) {
     badge.textContent = (net >= 0 ? '+' : '') + fmt(net) + ' net';
@@ -1570,23 +1871,13 @@ function renderCashflowChart(monthly, byCategory) {
     badge.style.color = net >= 0 ? 'var(--accent3)' : 'var(--danger)';
   }
 
-  const catSpend = {};
-  (byCategory || []).filter(r => r.type === 'expense').forEach(r => {
-    catSpend[r.category] = (catSpend[r.category] || 0) + r.total;
-  });
-  const cats = Object.entries(catSpend).sort((a,b)=>b[1]-a[1]);
-  const labels = cats.map(c=>c[0]);
-  const values = cats.map(c=>c[1]);
-  const colors = CAT_COLORS.slice(0, labels.length);
-
   const totalEl = document.getElementById('cashflow-total');
-  if (totalEl) totalEl.textContent = fmt(totalExpense);
+  if (totalEl) totalEl.textContent = fmt(totalFcOut);
 
   if (charts.cashflow) charts.cashflow.destroy();
   const ctx = document.getElementById('cashflow-chart')?.getContext('2d');
   if (!ctx) return;
-
-  if (!values.length) { ctx.clearRect(0,0,200,200); return; }
+  if (!values.length) { ctx.clearRect(0, 0, 200, 200); return; }
 
   charts.cashflow = new Chart(ctx, {
     type: 'doughnut',
@@ -1595,18 +1886,13 @@ function renderCashflowChart(monthly, byCategory) {
       datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#ffffff', hoverOffset: 4 }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '72%',
+      responsive: true, maintainAspectRatio: false, cutout: '72%',
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#ffffff',
-          borderColor: 'rgba(0,0,0,0.08)',
-          borderWidth: 1,
-          titleColor: '#1a1d28',
-          bodyColor: '#5a5e72',
-          callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)}` }
+          backgroundColor: '#ffffff', borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1,
+          titleColor: '#1a1d28', bodyColor: '#5a5e72',
+          callbacks: { label: c => ` ${c.label}: ${fmt(c.raw)}/mo` }
         }
       }
     }
@@ -1614,8 +1900,8 @@ function renderCashflowChart(monthly, byCategory) {
 
   const leg = document.getElementById('cashflow-legend');
   if (leg) {
-    leg.innerHTML = cats.slice(0,7).map((c,i) => {
-      const pct = totalExpense > 0 ? Math.round((c[1]/totalExpense)*100) : 0;
+    leg.innerHTML = cats.slice(0, 8).map((c, i) => {
+      const pct = totalFcOut > 0 ? Math.round((c[1] / totalFcOut) * 100) : 0;
       return `<div style="display:flex;align-items:center;gap:0.5rem;min-width:0">
         <div style="width:10px;height:10px;border-radius:3px;flex-shrink:0;background:${colors[i]}"></div>
         <div style="font-size:0.78rem;color:var(--text2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c[0]}</div>
@@ -1625,6 +1911,7 @@ function renderCashflowChart(monthly, byCategory) {
     }).join('');
   }
 }
+
 
 // ─── RECENT TRANSACTIONS (dashboard only) ─────────────────────────────────
 function txHTML(tx) {
@@ -2123,6 +2410,7 @@ function switchSalaryEdit(owner, btn) {
     document.getElementById('sal-gross').value = s.gross_salary;
     document.getElementById('sal-pension').value = s.pension_percent;
     document.getElementById('sal-loan').value = s.student_loan_plan;
+    document.getElementById('sal-payday').value = s.pay_day || 25;
   }
 }
 
@@ -2132,13 +2420,15 @@ async function submitSalary() {
     gross_salary: parseFloat(document.getElementById('sal-gross').value) || 0,
     pension_percent: parseFloat(document.getElementById('sal-pension').value) || 5,
     student_loan_plan: document.getElementById('sal-loan').value,
+    pay_day: parseInt(document.getElementById('sal-payday').value) || 25,
   };
   await api('/api/salaries', 'POST', data);
   closeModal('salary-modal');
   toast('Salary saved ✓');
   await loadSalaries();
   renderSalary(currentSalaryOwner);
-  renderProjectionChart(); // update dashboard projection with new salary
+  renderMonthOverview();       // refresh payday countdown
+  renderProjectionChart();     // update dashboard projection
 }
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────
@@ -2874,7 +3164,7 @@ function buildProjection(viewMode) {
   const ashNetCurrent   = ashIncome   - ashOut   - savAmt.ash;
 
   // Build 12 months
-  const months = [], currentData = [], savingsData = [];
+  const months = [], monthKeys = [], currentData = [], savingsData = [];
   const now = new Date();
 
   let hCur = henryCurrent, hSav = henrySavings;
@@ -2883,6 +3173,7 @@ function buildProjection(viewMode) {
   for (let i = 1; i <= 12; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
     months.push(d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }));
+    monthKeys.push(d.toISOString().slice(0, 7));
 
     hCur += henryNetCurrent;
     hSav += savAmt.henry;
@@ -2901,14 +3192,14 @@ function buildProjection(viewMode) {
     }
   }
 
-  return { months, currentData, savingsData, henryNetCurrent, ashNetCurrent, savAmt };
+  return { months, monthKeys, currentData, savingsData, henryNetCurrent, ashNetCurrent, savAmt };
 }
 
 function renderProjectionChart() {
-  const { months, currentData, savingsData, henryNetCurrent, ashNetCurrent, savAmt } = buildProjection(projectionView);
+  const { months, currentData, savingsData, monthKeys, henryNetCurrent, ashNetCurrent, savAmt } = buildProjection(projectionView);
 
   // Summary chips
-  let monthlySurplus, monthlySavings, yearEndSavings;
+  let monthlySurplus, monthlySavings;
   if (projectionView === 'henry') {
     monthlySurplus = henryNetCurrent;
     monthlySavings = savAmt.henry;
@@ -2919,8 +3210,7 @@ function renderProjectionChart() {
     monthlySurplus = henryNetCurrent + ashNetCurrent;
     monthlySavings = savAmt.henry + savAmt.ash;
   }
-  yearEndSavings = savingsData[savingsData.length - 1] || 0;
-  const yearEndCurrent = currentData[currentData.length - 1] || 0;
+  const yearEndTotal = (currentData[currentData.length - 1] || 0) + (savingsData[savingsData.length - 1] || 0);
 
   document.getElementById('proj-summary').innerHTML = `
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.7rem;text-align:center">
@@ -2932,13 +3222,25 @@ function renderProjectionChart() {
       <div style="font-family:'DM Mono',monospace;font-size:0.95rem;color:var(--accent3)">${fmt(monthlySavings)}</div>
     </div>
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.7rem;text-align:center">
-      <div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem">Savings in 12mo</div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.95rem;color:var(--accent)">${fmt(yearEndSavings)}</div>
+      <div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem">Total in 12mo</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.95rem;color:var(--accent)">${fmt(yearEndTotal)}</div>
     </div>`;
+
+  // Build actual-total dataset from snapshots, aligned to the month labels
+  const snapMap = {};
+  snapshots.forEach(s => {
+    const total = s.henry_current + s.henry_savings + s.ash_current + s.ash_savings;
+    if (projectionView === 'henry') snapMap[s.month] = s.henry_current + s.henry_savings;
+    else if (projectionView === 'ash') snapMap[s.month] = s.ash_current + s.ash_savings;
+    else snapMap[s.month] = total;
+  });
+  const actualData = monthKeys.map(k => snapMap[k] !== undefined ? snapMap[k] : null);
 
   if (charts.projection) charts.projection.destroy();
   const ctx = document.getElementById('projection-chart')?.getContext('2d');
   if (!ctx) return;
+
+  const forecastTotal = months.map((_, i) => Math.round((currentData[i] || 0) + (savingsData[i] || 0)));
 
   charts.projection = new Chart(ctx, {
     type: 'line',
@@ -2946,24 +3248,40 @@ function renderProjectionChart() {
       labels: months,
       datasets: [
         {
-          label: 'Current account',
-          data: currentData,
-          borderColor: 'var(--henry)',
-          backgroundColor: 'rgba(94,196,240,0.08)',
+          label: 'Forecast total',
+          data: forecastTotal,
+          borderColor: '#1a7fc0',
+          backgroundColor: 'rgba(26,127,192,0.07)',
           fill: true,
           tension: 0.4,
-          pointRadius: 3,
-          borderDash: [6, 3],
+          pointRadius: 2,
+          borderWidth: 2,
+          borderDash: [5, 3],
         },
         {
-          label: 'Savings account',
+          label: 'Savings forecast',
           data: savingsData,
-          borderColor: 'var(--accent3)',
-          backgroundColor: 'rgba(109,219,168,0.08)',
+          borderColor: '#1a9e6a',
+          backgroundColor: 'rgba(26,158,106,0.05)',
           fill: true,
           tension: 0.4,
-          pointRadius: 3,
-          borderDash: [6, 3],
+          pointRadius: 2,
+          borderWidth: 1.5,
+          borderDash: [4, 3],
+        },
+        {
+          label: 'Actual recorded',
+          data: actualData,
+          borderColor: '#c07a1a',
+          backgroundColor: 'rgba(192,122,26,0.12)',
+          fill: false,
+          tension: 0.2,
+          pointRadius: 6,
+          pointBackgroundColor: '#c07a1a',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          borderWidth: 2.5,
+          spanGaps: false,
         },
       ]
     },
@@ -2971,17 +3289,18 @@ function renderProjectionChart() {
       ...chartOpts(),
       plugins: {
         ...chartOpts().plugins,
-        legend: { display: true, labels: { color: '#5a5e72', font: { size: 11 }, boxWidth: 10 } },
+        legend: { display: true, labels: { color: '#5a5e72', font: { size: 11 }, boxWidth: 10, filter: i => i.text !== 'Savings forecast' } },
         tooltip: {
           backgroundColor: '#ffffff',
-          callbacks: {
-            label: ctx => ' ' + ctx.dataset.label + ': ' + fmt(ctx.raw)
-          }
+          borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1,
+          titleColor: '#1a1d28', bodyColor: '#5a5e72',
+          callbacks: { label: c => c.raw !== null ? ' ' + c.dataset.label + ': ' + fmt(c.raw) : null }
         }
       }
     }
   });
 }
+
 
 // ─── FORECAST DATE FIELD TOGGLE ────────────────────────────────────────────
 function toggleFcDateField() {
