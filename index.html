@@ -1755,6 +1755,7 @@ function renderHistorySection() {
 
   const chartWrap = document.getElementById('history-chart-wrap');
   if (chartWrap) chartWrap.style.display = rows.length >= 2 ? '' : 'none';
+  const months = rows.map(r => {
     const [y, m] = r.snap.month.split('-').map(Number);
     return new Date(y, m-1, 1).toLocaleDateString('en-GB', { month:'short', year:'2-digit' });
   });
