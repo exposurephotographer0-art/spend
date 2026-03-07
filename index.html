@@ -836,31 +836,41 @@
 
     <!-- TRANSACTIONS -->
     <div id="page-transactions" class="page">
-      <div class="section-header">
-        <div class="section-title">Transactions</div>
-        <button class="btn btn-primary btn-sm" onclick="openModal('add-tx-modal')">+ Add</button>
+
+      <!-- Month nav -->
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem">
+        <button onclick="txShiftMonth(-1)" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:36px;height:36px;font-size:1.1rem;cursor:pointer;color:var(--text2);flex-shrink:0">&#8249;</button>
+        <div id="tx-month-label" style="flex:1;text-align:center;font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--text)"></div>
+        <button onclick="txShiftMonth(1)" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:36px;height:36px;font-size:1.1rem;cursor:pointer;color:var(--text2);flex-shrink:0">&#8250;</button>
+        <button class="btn btn-primary btn-sm" onclick="openQuickAdd()" style="flex-shrink:0">+ Log spend</button>
       </div>
 
-      <div class="filter-row">
-        <select id="tx-filter-owner" onchange="loadTransactions()">
-          <option value="">All people</option>
-          <option value="Henry">Henry</option>
-          <option value="Ash">Ash</option>
-        </select>
-        <select id="tx-filter-cat" onchange="loadTransactions()">
-          <option value="">All categories</option>
-        </select>
-        <input type="month" id="tx-filter-month" onchange="loadTransactions()">
-      </div>
+      <!-- Summary strip -->
+      <div id="tx-summary-bar" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:1rem"></div>
 
       <!-- View toggle -->
       <div style="display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:3px;gap:3px;margin-bottom:1rem">
-        <button class="tab-btn active" id="tx-view-btn-forecast" onclick="switchTxView('forecast',this)" style="flex:1;padding:0.4rem;font-size:0.8rem">📋 By Forecast</button>
-        <button class="tab-btn" id="tx-view-btn-list" onclick="switchTxView('list',this)" style="flex:1;padding:0.4rem;font-size:0.8rem">📅 All Transactions</button>
+        <button class="tab-btn active" id="tx-view-btn-checklist" onclick="switchTxView('checklist',this)" style="flex:1;padding:0.4rem;font-size:0.82rem">&#10003; Month checklist</button>
+        <button class="tab-btn" id="tx-view-btn-log" onclick="switchTxView('log',this)" style="flex:1;padding:0.4rem;font-size:0.82rem">&#128203; All logged</button>
       </div>
 
-      <div id="tx-forecast-view"></div>
-      <div id="tx-list-full" class="tx-list" style="display:none"></div>
+      <!-- Checklist: forecast items as end-of-month reconciliation -->
+      <div id="tx-checklist-view"></div>
+
+      <!-- Log: flat list of recorded transactions -->
+      <div id="tx-log-view" style="display:none">
+        <div style="display:flex;gap:0.5rem;margin-bottom:0.8rem">
+          <select id="tx-filter-owner" onchange="loadTransactions()" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0.5rem;color:var(--text);font-size:0.85rem">
+            <option value="">All people</option>
+            <option value="Henry">Henry</option>
+            <option value="Ash">Ash</option>
+          </select>
+          <select id="tx-filter-cat" onchange="loadTransactions()" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0.5rem;color:var(--text);font-size:0.85rem">
+            <option value="">All categories</option>
+          </select>
+        </div>
+        <div id="tx-list-full" class="tx-list"></div>
+      </div>
     </div>
 
     <!-- BUDGETS -->
@@ -1192,40 +1202,70 @@
 <!-- ── MODALS ────────────────────────────────────────────────────────── -->
 
 <!-- Confirm Forecast Item as Transaction -->
-<div id="confirm-fc-modal" class="modal-overlay">
+<!-- Quick Add: log ad-hoc spend fast -->
+<div id="quick-add-modal" class="modal-overlay">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">✓ Confirm Payment</div>
-      <button class="close-btn" onclick="closeModal('confirm-fc-modal')">×</button>
-    </div>
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.8rem;margin-bottom:1rem">
-      <div style="font-weight:600;font-size:1rem" id="cfc-name-display"></div>
-      <div style="font-size:0.8rem;color:var(--text2);margin-top:0.2rem" id="cfc-meta-display"></div>
+      <div class="modal-title">Log a spend</div>
+      <button class="close-btn" onclick="closeModal('quick-add-modal')">&#215;</button>
     </div>
     <div class="form-grid">
       <div class="form-group">
-        <label class="form-label">Amount (£)</label>
-        <input type="number" id="cfc-amount" step="0.01" min="0">
+        <label class="form-label">Person</label>
+        <select id="qa-owner">
+          <option value="Henry">Henry</option>
+          <option value="Ash">Ash</option>
+        </select>
       </div>
       <div class="form-group">
+        <label class="form-label">Amount (&#163;)</label>
+        <input type="number" id="qa-amount" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="form-group form-col-2">
+        <label class="form-label">Category</label>
+        <div id="qa-cat-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.35rem;margin-top:0.2rem"></div>
+        <input type="hidden" id="qa-cat-selected" value="Groceries">
+      </div>
+      <div class="form-group form-col-2">
+        <label class="form-label">Description (optional)</label>
+        <input type="text" id="qa-desc" placeholder="e.g. Tesco, Costa, Amazon">
+      </div>
+      <div class="form-group form-col-2">
         <label class="form-label">Date</label>
-        <input type="date" id="cfc-date">
-      </div>
-      <div class="form-group form-col-2">
-        <label class="form-label">Account</label>
-        <select id="cfc-account"></select>
-      </div>
-      <div class="form-group form-col-2">
-        <label class="form-label">Note (optional)</label>
-        <input type="text" id="cfc-note" placeholder="Any extra detail">
+        <input type="date" id="qa-date">
       </div>
     </div>
-    <input type="hidden" id="cfc-owner">
-    <input type="hidden" id="cfc-category">
-    <input type="hidden" id="cfc-fc-id">
-    <div style="margin-top:1rem;display:flex;gap:0.5rem">
-      <button class="btn btn-primary" onclick="submitConfirmForecast()">✓ Confirm & Save</button>
-      <button class="btn btn-ghost" onclick="closeModal('confirm-fc-modal')">Cancel</button>
+    <div style="display:flex;gap:0.5rem;margin-top:1rem">
+      <button class="btn btn-primary" style="flex:1" onclick="submitQuickAdd()">Save spend</button>
+      <button class="btn btn-ghost" onclick="closeModal('quick-add-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Actual Amount: enter real amount for variable/annual items -->
+<div id="actual-amount-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="aam-title">Confirm payment</div>
+      <button class="close-btn" onclick="closeModal('actual-amount-modal')">&#215;</button>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem;margin-bottom:1rem">
+      <div style="font-size:0.8rem;color:var(--text2)" id="aam-meta"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group form-col-2">
+        <label class="form-label">Actual amount paid (&#163;)</label>
+        <input type="number" id="aam-amount" step="0.01" min="0" style="font-size:1.2rem;text-align:center;font-family:'DM Mono',monospace">
+      </div>
+      <div class="form-group form-col-2">
+        <label class="form-label">Date paid</label>
+        <input type="date" id="aam-date">
+      </div>
+    </div>
+    <input type="hidden" id="aam-fc-id">
+    <div style="display:flex;gap:0.5rem;margin-top:1rem">
+      <button class="btn btn-primary" style="flex:1" onclick="submitActualAmount()">Confirm & save</button>
+      <button class="btn btn-ghost" onclick="closeModal('actual-amount-modal')">Cancel</button>
     </div>
   </div>
 </div>
@@ -1548,7 +1588,7 @@ async function showApp() {
   const now = new Date();
   document.getElementById('header-month').textContent =
     now.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-  document.getElementById('tx-filter-month').value = now.toISOString().slice(0, 7);
+  txCurrentMonth = now.toISOString().slice(0, 7);
   document.getElementById('tx-date').value = now.toISOString().slice(0, 10);
   document.getElementById('op-date').value = now.toISOString().slice(0, 10);
 
@@ -1594,7 +1634,8 @@ function populateCategorySelects() {
 
   const filterCats = '<option value="">All categories</option>' +
     CATEGORIES.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-  document.getElementById('tx-filter-cat').innerHTML = filterCats;
+  const fcatEl = document.getElementById('tx-filter-cat');
+  if (fcatEl) fcatEl.innerHTML = filterCats;
 }
 
 function populateAccountSelect() {
@@ -1781,231 +1822,382 @@ async function loadRecentTx() {
 }
 
 // ─── TRANSACTIONS ──────────────────────────────────────────────────────────
-let txViewMode = 'forecast'; // 'forecast' or 'list'
+
+let txViewMode = 'checklist';
+let txCurrentMonth = new Date().toISOString().slice(0, 7);
+
+// Month navigation
+function txShiftMonth(delta) {
+  const [y, m] = txCurrentMonth.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  txCurrentMonth = d.toISOString().slice(0, 7);
+  loadTransactions();
+}
+
+function updateTxMonthLabel() {
+  const [y, m] = txCurrentMonth.split('-').map(Number);
+  const label = new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const el = document.getElementById('tx-month-label');
+  if (el) el.textContent = label;
+}
 
 function switchTxView(mode, btn) {
   txViewMode = mode;
-  document.getElementById('tx-view-btn-forecast').classList.toggle('active', mode === 'forecast');
-  document.getElementById('tx-view-btn-list').classList.toggle('active', mode === 'list');
-  document.getElementById('tx-forecast-view').style.display = mode === 'forecast' ? '' : 'none';
-  document.getElementById('tx-list-full').style.display = mode === 'list' ? '' : 'none';
+  document.getElementById('tx-view-btn-checklist').classList.toggle('active', mode === 'checklist');
+  document.getElementById('tx-view-btn-log').classList.toggle('active', mode === 'log');
+  document.getElementById('tx-checklist-view').style.display = mode === 'checklist' ? '' : 'none';
+  document.getElementById('tx-log-view').style.display = mode === 'log' ? '' : 'none';
   loadTransactions();
 }
 
 async function loadTransactions() {
-  const owner = document.getElementById('tx-filter-owner').value;
-  const month = document.getElementById('tx-filter-month').value;
-  const cat   = document.getElementById('tx-filter-cat')?.value || '';
-  let q = '?';
-  if (owner) q += `owner=${owner}&`;
-  if (month) q += `month=${month}&`;
+  updateTxMonthLabel();
+
+  // Always rebuild the registry so confirm buttons work regardless of page order
+  if (!forecastItems.length) await loadForecastFromDB().catch(() => {});
+  getMergedForecast(); // populates _fcItemRegistry
+
+  const owner = document.getElementById('tx-filter-owner')?.value || '';
+  const cat   = document.getElementById('tx-filter-cat')?.value   || '';
+  let q = `?month=${txCurrentMonth}&`;
+  if (owner) q += `owner=${encodeURIComponent(owner)}&`;
   if (cat)   q += `category=${encodeURIComponent(cat)}&`;
 
   transactions = await api(`/api/transactions${q}`) || [];
 
-  if (txViewMode === 'list') {
+  renderTxSummary(transactions);
+
+  if (txViewMode === 'log') {
     const el = document.getElementById('tx-list-full');
-    el.innerHTML = transactions.length
-      ? transactions.map(tx => txHTML(tx, true)).join('')
-      : '<div class="loading">No transactions found</div>';
+    if (el) el.innerHTML = transactions.length
+      ? transactions.map(t => txHTML(t, true)).join('')
+      : '<div class="loading">No transactions this month</div>';
   } else {
-    renderTxForecastView(transactions, owner, month);
+    renderChecklist(transactions);
   }
 }
 
-function renderTxForecastView(txs, filterOwner, filterMonth) {
-  const el = document.getElementById('tx-forecast-view');
-  const forecastAll = getMergedForecast().filter(i => i.category !== 'Savings');
+// ── Summary strip (3 stat pills) ─────────────────────────────────────────────
+function renderTxSummary(txs) {
+  const el = document.getElementById('tx-summary-bar');
+  if (!el) return;
+  const spent    = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const income   = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const fcItems  = getMergedForecast().filter(i => i.category !== 'Savings');
+  const projected = fcItems.reduce((s, i) => s + toMonthly(i.amount, i.frequency), 0);
+  const remaining = projected - spent;
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.65rem 0.5rem;text-align:center">
+      <div style="font-size:0.63rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.25rem">Spent</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.9rem;font-weight:600;color:var(--danger)">${fmt(spent)}</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.65rem 0.5rem;text-align:center">
+      <div style="font-size:0.63rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.25rem">Forecast</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.9rem;font-weight:600;color:var(--text2)">${fmt(projected)}</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.65rem 0.5rem;text-align:center">
+      <div style="font-size:0.63rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.25rem">Left</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.9rem;font-weight:600;color:${remaining >= 0 ? 'var(--accent3)' : 'var(--danger)'}">${fmt(remaining)}</div>
+    </div>`;
+}
 
-  // Filter forecast by owner
-  const fcItems = filterOwner
-    ? forecastAll.filter(i => i.owner === filterOwner || i.owner === 'Joint')
-    : forecastAll;
+// ── Checklist ─────────────────────────────────────────────────────────────────
+// Each forecast item is a row. Fixed monthly DDs = "Tick off" (one tap, forecast amount).
+// Variable/annual items = "Enter amount" (opens mini modal).
+// Already-matched items show green ✓ with the actual amount paid.
+function renderChecklist(txs) {
+  const el = document.getElementById('tx-checklist-view');
+  if (!el) return;
 
-  // Group forecast items by category
-  const byCat = {};
-  fcItems.forEach(i => { (byCat[i.category] = byCat[i.category] || []).push(i); });
+  const fcItems = getMergedForecast().filter(i => i.category !== 'Savings');
 
-  // Index transactions by category
-  const txByCat = {};
-  txs.forEach(tx => {
-    (txByCat[tx.category] = txByCat[tx.category] || []).push(tx);
-  });
+  // ── Match transactions to forecast items ─────────────────────────────────
+  // tx.description is set to item.name when confirmed via "Tick off" / "Enter amount"
+  // so we can do exact-name matching first, then fuzzy fallback.
+  const claimedIds = new Set();
+  const itemTxMap  = {};  // item.id → [tx, ...]
+  fcItems.forEach(i => { itemTxMap[i.id] = []; });
 
-  // Match a transaction to a forecast item:
-  // 1) exact description match (case-insensitive)
-  // 2) one string contains the other
-  // Returns true if tx likely corresponds to this forecast item
-  function txMatchesItem(tx, item) {
-    const txDesc = (tx.description || '').toLowerCase().trim();
-    const fcName = item.name.toLowerCase().trim();
-    if (!txDesc || !fcName) return false;
-    return txDesc === fcName || txDesc.includes(fcName) || fcName.includes(txDesc);
+  // Pass 1 – exact description match (case-insensitive)
+  for (const item of fcItems) {
+    const needle = item.name.toLowerCase().trim();
+    for (const tx of txs) {
+      if (claimedIds.has(tx.id)) continue;
+      if ((tx.description || '').toLowerCase().trim() === needle) {
+        itemTxMap[item.id].push(tx);
+        claimedIds.add(tx.id);
+      }
+    }
   }
-
-  // Track which tx ids have been claimed by a forecast item (per category)
-  // Each tx can only be claimed once to avoid double-counting
-  const claimedTxIds = new Set();
-
-  // Pre-assign txs to forecast items greedily (best-match first)
-  // We do a two-pass: first exact matches, then substring matches
-  const itemTxMap = new Map(); // item.id -> [tx, ...]
-  fcItems.forEach(item => itemTxMap.set(item.id, []));
-
-  for (const pass of ['exact', 'fuzzy']) {
-    for (const item of fcItems) {
-      const catTxs = txByCat[item.category] || [];
-      for (const tx of catTxs) {
-        if (claimedTxIds.has(tx.id)) continue;
-        const txDesc = (tx.description || '').toLowerCase().trim();
-        const fcName = item.name.toLowerCase().trim();
-        const isExact = txDesc === fcName;
-        const isFuzzy = !isExact && (txDesc.includes(fcName) || fcName.includes(txDesc));
-        if ((pass === 'exact' && isExact) || (pass === 'fuzzy' && isFuzzy)) {
-          itemTxMap.get(item.id).push(tx);
-          claimedTxIds.add(tx.id);
-        }
+  // Pass 2 – substring match within same category
+  for (const item of fcItems) {
+    const needle = item.name.toLowerCase().trim();
+    for (const tx of txs) {
+      if (claimedIds.has(tx.id) || tx.category !== item.category) continue;
+      const desc = (tx.description || '').toLowerCase().trim();
+      if (desc && (desc.includes(needle) || needle.includes(desc))) {
+        itemTxMap[item.id].push(tx);
+        claimedIds.add(tx.id);
       }
     }
   }
 
-  const monthLabel = filterMonth
-    ? new Date(filterMonth + '-02').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
-    : new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  // ── Progress header ──────────────────────────────────────────────────────
+  const total = fcItems.length;
+  const done  = fcItems.filter(i => itemTxMap[i.id].length > 0).length;
+  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+  const barCol = pct === 100 ? 'var(--accent3)' : pct > 60 ? 'var(--accent)' : 'var(--henry)';
 
-  // Unmatched transactions: in a forecast category but not claimed by any item
-  const forecastCatSet = new Set(Object.keys(byCat));
-  const unmatchedTxs = txs.filter(tx => !claimedTxIds.has(tx.id));
+  // ── Group by category ────────────────────────────────────────────────────
+  const byCat = {};
+  fcItems.forEach(i => { (byCat[i.category] = byCat[i.category] || []).push(i); });
 
-  let html = Object.entries(byCat).map(([cat, items]) => {
-    const catTxs = txByCat[cat] || [];
-    const projected = items.reduce((s, i) => s + toMonthly(i.amount, i.frequency), 0);
-    const actual = catTxs.reduce((s, tx) => s + tx.amount, 0);
-    const pct = projected > 0 ? Math.min((actual / projected) * 100, 100) : 0;
-    const over = actual > projected;
-    const barCol = over ? 'var(--danger)' : pct > 80 ? '#f0c080' : 'var(--accent3)';
+  let html = `
+    <div class="card" style="padding:1rem;margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+        <span style="font-size:0.85rem;color:var(--text2)">
+          ${done === total && total > 0 ? '🎉 All confirmed!' : `${done} of ${total} confirmed`}
+        </span>
+        <span style="font-size:0.82rem;font-weight:700;color:${barCol}">${pct}%</span>
+      </div>
+      <div style="height:7px;background:var(--surface3);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${barCol};border-radius:4px;transition:width 0.4s ease"></div>
+      </div>
+    </div>`;
+
+  html += Object.entries(byCat).map(([cat, items]) => {
+    const catDone = items.filter(i => itemTxMap[i.id].length > 0).length;
     const icon = CAT_MAP[cat] || '📦';
 
-    return `<div class="card" style="margin-bottom:0.8rem">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem">
-        <div style="font-weight:600;font-size:0.95rem">${icon} ${cat}</div>
-        <div style="text-align:right">
-          <div style="font-size:0.78rem;font-family:'DM Mono',monospace;color:${barCol}">${fmt(actual)} <span style="color:var(--text3)">/ ${fmt(projected)}</span></div>
-          <div style="font-size:0.68rem;color:var(--text3)">paid / expected</div>
-        </div>
-      </div>
-      <div class="progress-bar" style="margin-bottom:0.8rem">
-        <div class="progress-fill" style="width:${pct}%;background:${barCol}"></div>
-      </div>
+    const rows = items.map(item => {
+      const matched   = itemTxMap[item.id] || [];
+      const isPaid    = matched.length > 0;
+      const isFixed   = item.frequency === 'monthly';  // direct debit — amount known
+      const ownerCol  = item.owner === 'Henry' ? 'var(--henry)' : item.owner === 'Ash' ? 'var(--ash)' : 'var(--accent)';
 
-      <!-- Forecast items with per-item confirm status -->
-      ${items.map(item => {
-        const monthly = toMonthly(item.amount, item.frequency);
-        const ownerCol = item.owner === 'Henry' ? 'var(--henry)' : item.owner === 'Ash' ? 'var(--ash)' : 'var(--accent)';
-        const confirmedTxs = itemTxMap.get(item.id) || [];
-        const isConfirmed = confirmedTxs.length > 0;
-        const amtLabel = item.frequency === 'monthly' ? fmt(item.amount)
-          : `${fmt(item.amount)} (${freqLabel(item.frequency)})`;
-        return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;border-bottom:1px solid var(--border)">
-          <div style="font-size:1rem">${isConfirmed ? '✅' : '⬜'}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:0.85rem;color:${isConfirmed ? 'var(--text3)' : 'var(--text)'};${isConfirmed ? 'text-decoration:line-through' : ''}">${item.name}</div>
-            <div style="font-size:0.7rem;color:${ownerCol}">${item.owner} · ${amtLabel}${item.payment_day ? ' · due ' + item.payment_day + ordinal(item.payment_day) : ''}${item.annual_date ? ' · ' + item.annual_date : ''}</div>
-            ${isConfirmed ? `<div style="font-size:0.68rem;color:var(--text3);margin-top:0.1rem">Matched: ${confirmedTxs.map(t => t.description || t.category).join(', ')}</div>` : ''}
-          </div>
-          ${isConfirmed
-            ? `<div style="font-size:0.72rem;color:var(--accent3);padding:0.2rem 0.5rem;background:rgba(26,158,106,0.10);border-radius:6px">paid</div>`
-            : `<button onclick="confirmForecastItem(${item.id})" style="background:rgba(26,158,106,0.10);border:1px solid rgba(26,158,106,0.3);color:var(--accent3);cursor:pointer;padding:0.25rem 0.6rem;border-radius:6px;font-size:0.78rem;font-weight:600;white-space:nowrap">✓ Confirm</button>`
-          }
+      // Amount label: always show actual payment, not /mo equivalent
+      const amtStr = item.frequency === 'monthly'
+        ? fmt(item.amount)
+        : `${fmt(item.amount)} ${freqLabel(item.frequency)}`;
+
+      let action;
+      if (isPaid) {
+        const paidAmt = matched.reduce((s, t) => s + t.amount, 0);
+        action = `<div style="text-align:right;flex-shrink:0">
+          <div style="font-size:0.7rem;color:var(--accent3);background:rgba(26,158,106,0.10);border:1px solid rgba(26,158,106,0.25);padding:0.15rem 0.5rem;border-radius:6px;font-weight:600;margin-bottom:0.15rem">✓ paid</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--accent3)">${fmt(paidAmt)}</div>
         </div>`;
-      }).join('')}
+      } else if (isFixed) {
+        action = `<button onclick="tickOff(${item.id})"
+          style="flex-shrink:0;background:rgba(26,127,192,0.08);border:1.5px solid rgba(26,127,192,0.25);color:var(--henry);
+                 cursor:pointer;padding:0.3rem 0.6rem;border-radius:8px;font-size:0.8rem;font-weight:600;white-space:nowrap">
+          Tick off
+        </button>`;
+      } else {
+        action = `<button onclick="openActualAmount(${item.id})"
+          style="flex-shrink:0;background:rgba(192,122,26,0.08);border:1.5px solid rgba(192,122,26,0.25);color:var(--accent);
+                 cursor:pointer;padding:0.3rem 0.6rem;border-radius:8px;font-size:0.8rem;font-weight:600;white-space:nowrap">
+          Enter amt
+        </button>`;
+      }
 
-      <!-- Actual transactions for this category -->
-      ${catTxs.length ? `<div style="margin-top:0.5rem">
-        <div style="font-size:0.72rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;padding-top:0.3rem;border-top:1px dashed var(--border)">Recorded transactions</div>
-        ${catTxs.map(tx => txHTML(tx, true)).join('')}
-      </div>` : ''}
+      return `<div style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 1rem;border-bottom:1px solid var(--border);${isPaid ? 'opacity:0.6' : ''}">
+        <div style="font-size:1rem;flex-shrink:0">${isPaid ? '✅' : (isFixed ? '🔄' : '💸')}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:0.88rem;font-weight:500;color:var(--text);${isPaid ? 'text-decoration:line-through' : ''};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.name}</div>
+          <div style="font-size:0.7rem;color:${ownerCol};margin-top:0.1rem">
+            ${item.owner}${item.payment_day ? ' · ' + item.payment_day + ordinal(item.payment_day) : ''}${item.annual_date ? ' · ' + item.annual_date : ''}
+          </div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--text2);flex-shrink:0;margin-right:0.3rem">${amtStr}</div>
+        ${action}
+      </div>`;
+    }).join('');
+
+    return `<div class="card" style="margin-bottom:0.8rem;padding:0;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.65rem 1rem;background:var(--surface2);border-bottom:1px solid var(--border)">
+        <span style="font-weight:600;font-size:0.9rem">${icon} ${cat}</span>
+        <span style="font-size:0.75rem;color:${catDone === items.length ? 'var(--accent3)' : 'var(--text3)'}">
+          ${catDone}/${items.length}
+        </span>
+      </div>
+      ${rows}
     </div>`;
   }).join('');
 
-  // Unmatched transactions at the bottom
-  if (unmatchedTxs.length) {
-    html += `<div class="card" style="margin-bottom:0.8rem">
-      <div style="font-weight:600;font-size:0.95rem;margin-bottom:0.6rem">📦 Other Transactions</div>
-      ${unmatchedTxs.map(tx => txHTML(tx, true)).join('')}
+  // Ad-hoc spend (logged but not matched to any forecast item)
+  const adHoc = txs.filter(t => t.type === 'expense' && !claimedIds.has(t.id));
+  if (adHoc.length) {
+    html += `<div class="card" style="margin-bottom:0.8rem;padding:0;overflow:hidden">
+      <div style="padding:0.65rem 1rem;background:var(--surface2);border-bottom:1px solid var(--border);font-weight:600;font-size:0.9rem">
+        📦 Ad-hoc spend
+      </div>
+      <div style="padding:0 0.5rem">${adHoc.map(t => txHTML(t, true)).join('')}</div>
     </div>`;
-  }
-
-  if (!html) {
-    el.innerHTML = '<div class="loading">No forecast items. Add some in the Forecast tab.</div>';
-    return;
   }
 
   el.innerHTML = html;
 }
 
-// ─── CONFIRM FORECAST ITEM ──────────────────────────────────────────────────
-// One-click confirm — no modal. Saves the transaction immediately using the
-// forecast item's own amount (not divided to monthly) and today's date.
-async function confirmForecastItem(idOrItem) {
-  // Accept either a numeric/string id (from registry) or a full item object
-  let item;
-  if (typeof idOrItem === 'number' || (typeof idOrItem === 'string' && !idOrItem.startsWith('{'))) {
-    item = _fcItemRegistry[idOrItem];
-    if (!item) { toast('Item not found', true); return; }
-  } else if (typeof idOrItem === 'string') {
-    item = JSON.parse(idOrItem);
-  } else {
-    item = idOrItem;
-  }
-
-  const amount = item.amount;
+// ── Tick off a fixed monthly direct debit (one tap, uses forecast amount) ────
+async function tickOff(itemId) {
+  const item = _fcItemRegistry[itemId];
+  if (!item) { toast('Forecast item not found — try reloading', true); return; }
   const owner = item.owner === 'Joint' ? 'Henry' : item.owner;
-  const acc = accounts.find(a => a.type === 'current' && a.owner === owner)
-    || accounts.find(a => a.type === 'current');
+  const acc   = accounts.find(a => a.type === 'current' && a.owner === owner) || accounts.find(a => a.type === 'current');
+  // Use last day of the selected month as the transaction date
+  const [y, m] = txCurrentMonth.split('-').map(Number);
+  const date = new Date(y, m, 0).toISOString().slice(0, 10);
+  await api('/api/transactions', 'POST', {
+    type: 'expense', owner, amount: item.amount,
+    category: item.category, description: item.name,
+    date, account_id: acc?.id || null, is_recurring: 0,
+  });
+  toast(`✓ ${item.name} ticked off`);
+  loadTransactions();
+  if (document.getElementById('page-dashboard').classList.contains('active')) loadDashboard();
+}
 
-  const data = {
-    type: 'expense',
-    owner,
-    amount,
-    category: item.category,
-    description: item.name,
+// Keep confirmForecastItem as alias (used from forecast tab)
+async function confirmForecastItem(idOrItem) {
+  let item;
+  if (typeof idOrItem === 'object' && idOrItem !== null) {
+    item = idOrItem;
+  } else {
+    item = _fcItemRegistry[idOrItem];
+    if (!item) {
+      // Registry may not be built yet if forecast tab was never visited — build it now
+      getMergedForecast();
+      item = _fcItemRegistry[idOrItem];
+    }
+    if (!item) { toast('Item not found — try reloading', true); return; }
+  }
+  const owner = item.owner === 'Joint' ? 'Henry' : item.owner;
+  const acc   = accounts.find(a => a.type === 'current' && a.owner === owner) || accounts.find(a => a.type === 'current');
+  await api('/api/transactions', 'POST', {
+    type: 'expense', owner, amount: item.amount,
+    category: item.category, description: item.name,
     date: new Date().toISOString().slice(0, 10),
-    account_id: acc?.id || null,
-    is_recurring: 0,
-  };
-
-  await api('/api/transactions', 'POST', data);
+    account_id: acc?.id || null, is_recurring: 0,
+  });
   toast(`✓ ${item.name} confirmed`);
   loadDashboard();
   if (document.getElementById('page-transactions').classList.contains('active')) loadTransactions();
   if (document.getElementById('page-forecast').classList.contains('active')) loadForecast();
 }
 
-// Keep openConfirmForecast as alias for backward compat from forecast page confirm buttons
-function openConfirmForecast(item) {
-  confirmForecastItem(item);
+function openConfirmForecast(item) { confirmForecastItem(item); }
+
+// ── Enter actual amount (for variable / annual items) ─────────────────────────
+function openActualAmount(itemId) {
+  const item = _fcItemRegistry[itemId];
+  if (!item) return;
+  document.getElementById('aam-title').textContent = item.name;
+  const amtStr = item.frequency === 'monthly' ? fmt(item.amount) + '/mo' : fmt(item.amount) + ' ' + freqLabel(item.frequency);
+  document.getElementById('aam-meta').textContent = `${item.owner}  ·  ${item.category}  ·  Forecast: ${amtStr}`;
+  document.getElementById('aam-amount').value = item.amount.toFixed(2);
+  const [y, m] = txCurrentMonth.split('-').map(Number);
+  document.getElementById('aam-date').value = new Date(y, m, 0).toISOString().slice(0, 10);
+  document.getElementById('aam-fc-id').value = itemId;
+  openModal('actual-amount-modal');
 }
 
+async function submitActualAmount() {
+  const itemId = document.getElementById('aam-fc-id').value;
+  const item   = _fcItemRegistry[itemId];
+  if (!item) return;
+  const amount = parseFloat(document.getElementById('aam-amount').value);
+  if (!amount || amount <= 0) { toast('Enter a valid amount', true); return; }
+  const date   = document.getElementById('aam-date').value;
+  const owner  = item.owner === 'Joint' ? 'Henry' : item.owner;
+  const acc    = accounts.find(a => a.type === 'current' && a.owner === owner) || accounts.find(a => a.type === 'current');
+  await api('/api/transactions', 'POST', {
+    type: 'expense', owner, amount,
+    category: item.category, description: item.name,
+    date, account_id: acc?.id || null, is_recurring: 0,
+  });
+  closeModal('actual-amount-modal');
+  toast(`✓ ${item.name} saved`);
+  loadTransactions();
+  if (document.getElementById('page-dashboard').classList.contains('active')) loadDashboard();
+}
+
+// ── Quick Add (ad-hoc spend not in forecast) ──────────────────────────────────
+const QUICK_CATS = ['Groceries','Eating Out','Shopping','Social','Transport','Hobbies','Health','Entertainment','Travel','Car','Pet','Other'];
+
+function openQuickAdd() {
+  const [y, m] = txCurrentMonth.split('-').map(Number);
+  document.getElementById('qa-amount').value = '';
+  document.getElementById('qa-desc').value   = '';
+  document.getElementById('qa-date').value   = new Date(y, m, 0).toISOString().slice(0, 10);
+  document.getElementById('qa-cat-selected').value = 'Groceries';
+  // Build category pill grid
+  const grid = document.getElementById('qa-cat-grid');
+  grid.innerHTML = QUICK_CATS.map(c => {
+    const icon = CAT_MAP[c] || '📦';
+    const sel  = c === 'Groceries';
+    return `<button type="button" onclick="selectQaCat(this,'${c}')"
+      data-cat="${c}"
+      style="padding:0.35rem 0.15rem;border-radius:8px;
+             border:1.5px solid ${sel ? 'var(--henry)' : 'var(--border)'};
+             background:${sel ? 'rgba(26,127,192,0.08)' : 'var(--surface2)'};
+             cursor:pointer;font-size:0.65rem;color:${sel ? 'var(--henry)' : 'var(--text2)'};
+             text-align:center;display:flex;flex-direction:column;align-items:center;gap:0.1rem">
+      <span style="font-size:1rem">${icon}</span>
+      ${c.length > 8 ? c.slice(0,8) + '…' : c}
+    </button>`;
+  }).join('');
+  openModal('quick-add-modal');
+}
+
+function selectQaCat(btn, cat) {
+  document.getElementById('qa-cat-selected').value = cat;
+  document.querySelectorAll('#qa-cat-grid button').forEach(b => {
+    const sel = b === btn;
+    b.style.borderColor = sel ? 'var(--henry)'                  : 'var(--border)';
+    b.style.background  = sel ? 'rgba(26,127,192,0.08)'         : 'var(--surface2)';
+    b.style.color       = sel ? 'var(--henry)'                  : 'var(--text2)';
+  });
+}
+
+async function submitQuickAdd() {
+  const amount = parseFloat(document.getElementById('qa-amount').value);
+  if (!amount || amount <= 0) { toast('Enter an amount', true); return; }
+  const owner = document.getElementById('qa-owner').value;
+  const cat   = document.getElementById('qa-cat-selected').value || 'Other';
+  const desc  = document.getElementById('qa-desc').value.trim() || cat;
+  const date  = document.getElementById('qa-date').value;
+  const acc   = accounts.find(a => a.type === 'current' && a.owner === owner) || accounts.find(a => a.type === 'current');
+  await api('/api/transactions', 'POST', {
+    type: 'expense', owner, amount, category: cat,
+    description: desc, date, account_id: acc?.id || null, is_recurring: 0,
+  });
+  closeModal('quick-add-modal');
+  toast('Spend logged ✓');
+  loadTransactions();
+  if (document.getElementById('page-dashboard').classList.contains('active')) loadDashboard();
+}
+
+// ── Transaction HTML row ──────────────────────────────────────────────────────
 function txHTML(tx, showDelete = false) {
   const icon = CAT_MAP[tx.category] || '📦';
   const ownerColor = tx.owner === 'Henry' ? 'var(--henry)' : 'var(--ash)';
-  const del = showDelete ? `<button onclick="deleteTx(${tx.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:0.2rem;font-size:0.9rem">🗑</button>` : '';
+  const del = showDelete
+    ? `<button onclick="deleteTx(${tx.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:0.2rem 0.3rem;font-size:0.9rem" title="Delete">&#128465;</button>`
+    : '';
   return `<div class="tx-item">
     <div class="tx-icon">${icon}</div>
     <div class="tx-details">
       <div class="tx-desc">${tx.description || tx.category}</div>
       <div class="tx-meta">
         <div class="tx-owner-dot" style="background:${ownerColor}"></div>
-        <span>${tx.owner}</span>
-        <span>·</span>
-        <span>${tx.category}</span>
-        <span>·</span>
+        <span>${tx.owner}</span><span>·</span>
+        <span>${tx.category}</span><span>·</span>
         <span>${formatDate(tx.date)}</span>
-        ${tx.is_recurring ? `<span>·</span><span style="color:var(--accent);font-size:0.68rem">🔁 ${tx.recur_freq || 'recurring'}</span>` : ''}
+        ${tx.is_recurring ? '<span>·</span><span style="color:var(--accent);font-size:0.68rem">&#128260;</span>' : ''}
       </div>
     </div>
-    <div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.1rem">
       <div class="tx-amount ${tx.type}">${tx.type === 'income' ? '+' : '-'}${fmt(tx.amount)}</div>
       ${del}
     </div>
@@ -2015,7 +2207,7 @@ function txHTML(tx, showDelete = false) {
 async function deleteTx(id) {
   if (!confirm('Delete this transaction?')) return;
   await api(`/api/transactions/${id}`, 'DELETE');
-  toast('Transaction deleted');
+  toast('Deleted');
   loadTransactions();
   loadDashboard();
 }
@@ -2030,10 +2222,9 @@ async function submitTransaction() {
   const amount = parseFloat(document.getElementById('tx-amount').value);
   if (!amount || amount <= 0) { toast('Enter a valid amount', true); return; }
   const isRecurring = document.getElementById('tx-recurring').checked;
-  const recurFreq = document.getElementById('tx-recur-freq').value;
-  const recurEnd = document.getElementById('tx-recur-end').value;
-  const baseDate = document.getElementById('tx-date').value;
-
+  const recurFreq   = document.getElementById('tx-recur-freq').value;
+  const recurEnd    = document.getElementById('tx-recur-end').value;
+  const baseDate    = document.getElementById('tx-date').value;
   const data = {
     type: currentTxType,
     owner: document.getElementById('tx-owner').value,
@@ -2046,24 +2237,17 @@ async function submitTransaction() {
     recur_freq: isRecurring ? recurFreq : null,
     recur_end: isRecurring ? (recurEnd || null) : null,
   };
-
-  // Save the transaction for the entered date
   await api('/api/transactions', 'POST', data);
-
-  // If recurring, also pre-create the next occurrence (without account debit - just as a reminder entry)
   if (isRecurring) {
     const nextDate = getNextRecurDate(baseDate, recurFreq);
-    const endOk = !recurEnd || nextDate <= recurEnd;
-    if (endOk) {
-      const nextData = { ...data, date: nextDate, account_id: null }; // next one doesn't auto-debit
-      await api('/api/transactions', 'POST', nextData);
+    if (!recurEnd || nextDate <= recurEnd) {
+      await api('/api/transactions', 'POST', { ...data, date: nextDate });
     }
   }
-
   closeModal('add-tx-modal');
   toast(isRecurring ? 'Transaction + next occurrence saved ✓' : 'Transaction added ✓');
   document.getElementById('tx-amount').value = '';
-  document.getElementById('tx-desc').value = '';
+  document.getElementById('tx-desc').value   = '';
   document.getElementById('tx-recurring').checked = false;
   toggleTxRecurring();
   loadDashboard();
