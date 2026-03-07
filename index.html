@@ -834,6 +834,9 @@
           <option value="Henry">Henry</option>
           <option value="Ash">Ash</option>
         </select>
+        <select id="tx-filter-cat" onchange="loadTransactions()">
+          <option value="">All categories</option>
+        </select>
         <input type="month" id="tx-filter-month" onchange="loadTransactions()">
       </div>
 
@@ -1689,14 +1692,12 @@ function renderMonthStats(stats) {
 
 function renderCashflowChart(monthly) {
   const months = [...new Set(monthly.map(m => m.month))].sort().slice(-6);
-  const incomes = months.map(m => {
-    const r = monthly.find(x => x.month === m && x.type === 'income');
-    return r ? r.total : 0;
-  });
-  const expenses = months.map(m => {
-    const r = monthly.find(x => x.month === m && x.type === 'expense');
-    return r ? r.total : 0;
-  });
+  const incomes = months.map(m =>
+    monthly.filter(x => x.month === m && x.type === 'income').reduce((s, r) => s + r.total, 0)
+  );
+  const expenses = months.map(m =>
+    monthly.filter(x => x.month === m && x.type === 'expense').reduce((s, r) => s + r.total, 0)
+  );
 
   if (charts.cashflow) charts.cashflow.destroy();
   const ctx = document.getElementById('cashflow-chart').getContext('2d');
@@ -1738,9 +1739,11 @@ function switchTxView(mode, btn) {
 async function loadTransactions() {
   const owner = document.getElementById('tx-filter-owner').value;
   const month = document.getElementById('tx-filter-month').value;
+  const cat   = document.getElementById('tx-filter-cat')?.value || '';
   let q = '?';
   if (owner) q += `owner=${owner}&`;
   if (month) q += `month=${month}&`;
+  if (cat)   q += `category=${encodeURIComponent(cat)}&`;
 
   transactions = await api(`/api/transactions${q}`) || [];
 
@@ -1767,23 +1770,59 @@ function renderTxForecastView(txs, filterOwner, filterMonth) {
   const byCat = {};
   fcItems.forEach(i => { (byCat[i.category] = byCat[i.category] || []).push(i); });
 
-  // Map transactions by description+category for matching
-  const txMap = {};
+  // Index transactions by category
+  const txByCat = {};
   txs.forEach(tx => {
-    const key = tx.category;
-    (txMap[key] = txMap[key] || []).push(tx);
+    (txByCat[tx.category] = txByCat[tx.category] || []).push(tx);
   });
+
+  // Match a transaction to a forecast item:
+  // 1) exact description match (case-insensitive)
+  // 2) one string contains the other
+  // Returns true if tx likely corresponds to this forecast item
+  function txMatchesItem(tx, item) {
+    const txDesc = (tx.description || '').toLowerCase().trim();
+    const fcName = item.name.toLowerCase().trim();
+    if (!txDesc || !fcName) return false;
+    return txDesc === fcName || txDesc.includes(fcName) || fcName.includes(txDesc);
+  }
+
+  // Track which tx ids have been claimed by a forecast item (per category)
+  // Each tx can only be claimed once to avoid double-counting
+  const claimedTxIds = new Set();
+
+  // Pre-assign txs to forecast items greedily (best-match first)
+  // We do a two-pass: first exact matches, then substring matches
+  const itemTxMap = new Map(); // item.id -> [tx, ...]
+  fcItems.forEach(item => itemTxMap.set(item.id, []));
+
+  for (const pass of ['exact', 'fuzzy']) {
+    for (const item of fcItems) {
+      const catTxs = txByCat[item.category] || [];
+      for (const tx of catTxs) {
+        if (claimedTxIds.has(tx.id)) continue;
+        const txDesc = (tx.description || '').toLowerCase().trim();
+        const fcName = item.name.toLowerCase().trim();
+        const isExact = txDesc === fcName;
+        const isFuzzy = !isExact && (txDesc.includes(fcName) || fcName.includes(txDesc));
+        if ((pass === 'exact' && isExact) || (pass === 'fuzzy' && isFuzzy)) {
+          itemTxMap.get(item.id).push(tx);
+          claimedTxIds.add(tx.id);
+        }
+      }
+    }
+  }
 
   const monthLabel = filterMonth
     ? new Date(filterMonth + '-02').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
     : new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
-  // Unmatched transactions (categories not in forecast)
-  const forecastCats = new Set(Object.keys(byCat));
-  const unmatchedTxs = txs.filter(tx => !forecastCats.has(tx.category));
+  // Unmatched transactions: in a forecast category but not claimed by any item
+  const forecastCatSet = new Set(Object.keys(byCat));
+  const unmatchedTxs = txs.filter(tx => !claimedTxIds.has(tx.id));
 
   let html = Object.entries(byCat).map(([cat, items]) => {
-    const catTxs = txMap[cat] || [];
+    const catTxs = txByCat[cat] || [];
     const projected = items.reduce((s, i) => s + toMonthly(i.amount, i.frequency), 0);
     const actual = catTxs.reduce((s, tx) => s + tx.amount, 0);
     const pct = projected > 0 ? Math.min((actual / projected) * 100, 100) : 0;
@@ -1803,26 +1842,25 @@ function renderTxForecastView(txs, filterOwner, filterMonth) {
         <div class="progress-fill" style="width:${pct}%;background:${barCol}"></div>
       </div>
 
-      <!-- Forecast items with confirm buttons -->
+      <!-- Forecast items with per-item confirm status -->
       ${items.map(item => {
         const monthly = toMonthly(item.amount, item.frequency);
         const ownerCol = item.owner === 'Henry' ? 'var(--henry)' : item.owner === 'Ash' ? 'var(--ash)' : 'var(--accent)';
-        // Check if this item has been confirmed this month
-        const confirmed = catTxs.filter(tx =>
-          (tx.description || '').toLowerCase().includes(item.name.toLowerCase()) ||
-          item.name.toLowerCase().includes((tx.description || '').toLowerCase())
-        );
-        const isConfirmed = confirmed.length > 0;
+        const confirmedTxs = itemTxMap.get(item.id) || [];
+        const isConfirmed = confirmedTxs.length > 0;
+        // Safe JSON for onclick - use data attribute approach
+        const safeItem = JSON.stringify(item).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;border-bottom:1px solid var(--border)">
           <div style="font-size:1rem">${isConfirmed ? '✅' : '⬜'}</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:0.85rem;color:${isConfirmed ? 'var(--text3)' : 'var(--text)'};${isConfirmed ? 'text-decoration:line-through' : ''}">${item.name}</div>
             <div style="font-size:0.7rem;color:${ownerCol}">${item.owner} · ${freqLabel(item.frequency)}${item.payment_day ? ' · due ' + item.payment_day + ordinal(item.payment_day) : ''}${item.annual_date ? ' · ' + item.annual_date : ''}</div>
+            ${isConfirmed ? `<div style="font-size:0.68rem;color:var(--text3);margin-top:0.1rem">Matched: ${confirmedTxs.map(t => t.description || t.category).join(', ')}</div>` : ''}
           </div>
           <div style="font-family:'DM Mono',monospace;font-size:0.85rem;color:var(--text2)">${fmt(monthly)}</div>
           ${isConfirmed
             ? `<div style="font-size:0.72rem;color:var(--accent3);padding:0.2rem 0.5rem;background:rgba(168,213,162,0.15);border-radius:6px">paid</div>`
-            : `<button onclick='openConfirmForecast(${JSON.stringify(item)})' style="background:rgba(168,213,162,0.15);border:1px solid rgba(168,213,162,0.4);color:var(--accent3);cursor:pointer;padding:0.25rem 0.6rem;border-radius:6px;font-size:0.78rem;font-weight:600;white-space:nowrap">✓ Confirm</button>`
+            : `<button onclick='openConfirmForecast(${safeItem})' style="background:rgba(168,213,162,0.15);border:1px solid rgba(168,213,162,0.4);color:var(--accent3);cursor:pointer;padding:0.25rem 0.6rem;border-radius:6px;font-size:0.78rem;font-weight:600;white-space:nowrap">✓ Confirm</button>`
           }
         </div>`;
       }).join('')}
@@ -2789,7 +2827,7 @@ async function loadForecast() {
 
 function switchForecastCat(cat, btn) {
   forecastCat = cat;
-  btn.closest('.bottom-nav').querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  btn.closest('#page-forecast').querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderForecastList();
 }
@@ -2928,7 +2966,7 @@ function renderForecastList() {
                 <div style="font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--accent)">${fmt(monthly)}<span style="font-size:0.68rem;color:var(--text3)">/mo</span></div>
               </div>
               <div style="display:flex;gap:0.2rem;flex-shrink:0">
-                <button onclick="openConfirmForecast(${JSON.stringify(item).replace(/'/g,'\'').replace(/"/g,'&quot;')})" title="Confirm as transaction" style="background:rgba(168,213,162,0.15);border:1px solid rgba(168,213,162,0.4);color:var(--accent3);cursor:pointer;height:26px;border-radius:6px;font-size:0.72rem;padding:0 6px;font-weight:600">✓</button>
+                <button onclick="openConfirmForecast(${JSON.stringify(item).replace(/\\/g,'\\\\').replace(/'/g,"\\'")})" title="Confirm as transaction" style="background:rgba(168,213,162,0.15);border:1px solid rgba(168,213,162,0.4);color:var(--accent3);cursor:pointer;height:26px;border-radius:6px;font-size:0.72rem;padding:0 6px;font-weight:600">✓</button>
                 <button onclick="editForecastItem(${item.id})" style="background:var(--surface3);border:none;color:var(--text2);cursor:pointer;width:26px;height:26px;border-radius:6px;font-size:0.8rem">✏️</button>
                 <button onclick="deleteForecastItem(${item.id})" style="background:var(--surface3);border:none;color:var(--danger);cursor:pointer;width:26px;height:26px;border-radius:6px;font-size:0.8rem">×</button>
               </div>
