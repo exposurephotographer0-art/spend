@@ -1313,7 +1313,14 @@
 </style>
 
 <header>
-  <div class="logo">LEDGER</div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="logo">LEDGER</div>
+    <div id="sync-status" title="Checking sync…" style="
+      width:8px;height:8px;border-radius:50%;
+      background:#555;flex-shrink:0;
+      transition:background 0.3s;cursor:help;
+    "></div>
+  </div>
   <button class="mob-menu-btn" onclick="document.getElementById('header-nav').classList.toggle('mob-open')" aria-label="Menu">☰</button>
   <div class="header-nav" id="header-nav">
     <button class="nav-btn active" onclick="switchView('dashboard')">Dashboard</button>
@@ -2657,21 +2664,46 @@ async function dbGet(key) {
 async function dbSet(key, value) {
   // Write to localStorage immediately (instant UI)
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-  // Sync to worker in background (don't await — non-blocking)
+  // Sync to worker in background
+  setSyncStatus('saving');
   fetch(`${API_BASE}/${encodeURIComponent(key)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ value }),
-  }).catch(() => {}); // silently ignore network errors
+  }).then(r => {
+    if (r.ok) setSyncStatus('ok');
+    else r.text().then(t => setSyncStatus('error', `${r.status}: ${t.slice(0,80)}`));
+  }).catch(e => setSyncStatus('error', e.message || 'Network error'));
 }
 
 // Load all keys at once on startup (one round trip)
 async function dbGetAll() {
   try {
-    const r = await fetch(API_BASE);
-    if (r.ok) return await r.json();
-  } catch {}
+    const r = await fetch(API_BASE, { signal: AbortSignal.timeout(8000) });
+    if (r.ok) {
+      setSyncStatus('ok');
+      return await r.json();
+    }
+    setSyncStatus('error', `Worker returned ${r.status}`);
+  } catch (e) {
+    setSyncStatus('error', e.message || 'Cannot reach worker');
+  }
   return null;
+}
+
+function setSyncStatus(state, detail = '') {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  if (state === 'ok') {
+    el.title = 'Synced to cloud ✓';
+    el.style.background = '#4caf7d';
+  } else if (state === 'saving') {
+    el.title = 'Saving…';
+    el.style.background = '#f5a623';
+  } else {
+    el.title = `Not synced — ${detail}. Data saved locally only.`;
+    el.style.background = '#e05555';
+  }
 }
 
 function showLoader(msg = 'Loading…') {
@@ -4726,6 +4758,12 @@ async function initApp() {
 
   // Fetch all data in one round trip
   const allData = await dbGetAll();
+
+  if (!allData) {
+    // Worker unreachable — load from local cache and warn
+    showLoader('Worker offline — loading local data…');
+    await new Promise(r => setTimeout(r, 1200));
+  }
 
   // Hydrate all stores (falls back to localStorage if worker unreachable)
   loadEntries(allData?.['ledger-entries'] ?? null);
