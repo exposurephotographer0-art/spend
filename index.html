@@ -2639,11 +2639,96 @@ function saveEntries() {
 // ─────────────────────────────────────────
 const API_BASE = 'https://spend.exposurephotographer0.workers.dev/api/data';
 
+// ─────────────────────────────────────────
+// PASSWORD GATE
+// ─────────────────────────────────────────
+function getStoredPassword() {
+  try { return sessionStorage.getItem('ledger-auth') || ''; } catch { return ''; }
+}
+function storePassword(pw) {
+  try { sessionStorage.setItem('ledger-auth', pw); } catch {}
+}
+function authHeaders(extra = {}) {
+  const pw = getStoredPassword();
+  return pw ? { 'Content-Type': 'application/json', 'X-Auth-Password': pw, ...extra }
+             : { 'Content-Type': 'application/json', ...extra };
+}
+
+function showPasswordGate(errorMsg = '') {
+  let overlay = document.getElementById('pw-gate');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'pw-gate';
+    overlay.style.cssText = `
+      position:fixed;inset:0;background:#f5f4f1;z-index:9999;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'IBM Plex Sans',sans-serif;
+    `;
+    overlay.innerHTML = `
+      <div style="background:#fff;border:1px solid #e2ddd7;border-radius:4px;padding:48px 40px 40px;width:100%;max-width:360px;box-shadow:0 1px 3px rgba(0,0,0,0.07);">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:#c8820a;letter-spacing:0.08em;margin-bottom:8px;">₤ LEDGER</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9a9490;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:36px;">Finance Forecaster</div>
+        <div id="pw-error" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c0392b;margin-bottom:16px;padding:8px 12px;background:rgba(192,57,43,0.07);border:1px solid rgba(192,57,43,0.2);border-radius:3px;"></div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;color:#5a5a5a;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Password</div>
+        <input id="pw-input" type="password" autocomplete="current-password" placeholder="••••••••"
+          style="width:100%;padding:10px 14px;background:#f9f8f6;border:1px solid #e2ddd7;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:15px;color:#1a1a1a;outline:none;margin-bottom:20px;box-sizing:border-box;"
+          onfocus="this.style.borderColor='#c8820a';this.style.background='#fff';"
+          onblur="this.style.borderColor='#e2ddd7';this.style.background='#f9f8f6';"
+        />
+        <button id="pw-submit"
+          style="width:100%;padding:11px;background:#c8820a;color:#fff;border:none;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;"
+          onmouseover="this.style.background='#a06508'" onmouseout="this.style.background='#c8820a'"
+        >Sign In</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById('pw-input').focus();
+    document.getElementById('pw-input').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
+    document.getElementById('pw-submit').addEventListener('click', attemptLogin);
+  }
+  if (errorMsg) {
+    const errEl = document.getElementById('pw-error');
+    errEl.textContent = errorMsg;
+    errEl.style.display = 'block';
+  }
+}
+
+async function attemptLogin() {
+  const pw = document.getElementById('pw-input').value;
+  if (!pw) return;
+  // Test the password against the worker
+  try {
+    const r = await fetch(API_BASE, {
+      signal: AbortSignal.timeout(8000),
+      headers: { 'X-Auth-Password': pw },
+    });
+    if (r.ok) {
+      storePassword(pw);
+      const overlay = document.getElementById('pw-gate');
+      if (overlay) overlay.remove();
+      const allData = await r.json();
+      setSyncStatus('ok');
+      bootApp(allData);
+      return;
+    }
+    if (r.status === 401) {
+      showPasswordGate('Incorrect password. Try again.');
+      document.getElementById('pw-input').value = '';
+      document.getElementById('pw-input').focus();
+      return;
+    }
+    // Any other error — treat as wrong password / unreachable
+    showPasswordGate(`Server error (${r.status}). Try again.`);
+  } catch (e) {
+    showPasswordGate('Cannot reach server. Check connection.');
+  }
+}
+
 // Write-through cache: reads from localStorage instantly, syncs to D1 in background
 async function dbGet(key) {
   // 1. Try worker (source of truth)
   try {
-    const r = await fetch(`${API_BASE}/${encodeURIComponent(key)}`);
+    const r = await fetch(`${API_BASE}/${encodeURIComponent(key)}`, { headers: authHeaders() });
     if (r.ok) {
       const { value } = await r.json();
       if (value !== null && value !== undefined) {
@@ -2668,7 +2753,7 @@ async function dbSet(key, value) {
   setSyncStatus('saving');
   fetch(`${API_BASE}/${encodeURIComponent(key)}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify({ value }),
   }).then(r => {
     if (r.ok) setSyncStatus('ok');
@@ -2679,7 +2764,7 @@ async function dbSet(key, value) {
 // Load all keys at once on startup (one round trip)
 async function dbGetAll() {
   try {
-    const r = await fetch(API_BASE, { signal: AbortSignal.timeout(8000) });
+    const r = await fetch(API_BASE, { signal: AbortSignal.timeout(8000), headers: authHeaders() });
     if (r.ok) {
       setSyncStatus('ok');
       return await r.json();
@@ -4753,14 +4838,10 @@ document.addEventListener('keydown', e => {
 // ─────────────────────────────────────────
 // ASYNC INIT — load all data from D1 worker
 // ─────────────────────────────────────────
-async function initApp() {
-  showLoader('Connecting to database…');
-
-  // Fetch all data in one round trip
-  const allData = await dbGetAll();
+async function bootApp(allData) {
+  showLoader('Loading data…');
 
   if (!allData) {
-    // Worker unreachable — load from local cache and warn
     showLoader('Worker offline — loading local data…');
     await new Promise(r => setTimeout(r, 1200));
   }
@@ -4794,6 +4875,23 @@ async function initApp() {
   renderAll();
   restoreSavingsInputs();
   renderActualsDashChart();
+}
+
+async function initApp() {
+  // If we already have a password stored in session, try to connect directly
+  const storedPw = getStoredPassword();
+  if (storedPw) {
+    showLoader('Connecting to database…');
+    const allData = await dbGetAll();
+    if (allData !== null) {
+      bootApp(allData);
+      return;
+    }
+    // Stored password failed (wrong or expired) — clear it and show gate
+    try { sessionStorage.removeItem('ledger-auth'); } catch {}
+  }
+  // No stored password — show the gate
+  showPasswordGate();
 }
 
 initApp();
