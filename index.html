@@ -2761,10 +2761,16 @@ function uid() { return Math.random().toString(36).slice(2,10); }
 
 function loadEntries(data) {
   try {
-    if (data !== undefined && data !== null) { entries = data; return; }
-    const s = localStorage.getItem('ledger-entries');
-    if (s) entries = JSON.parse(s);
-    else entries = defaultEntries;
+    if (data !== undefined && data !== null) { entries = data; }
+    else {
+      const s = localStorage.getItem('ledger-entries');
+      if (s) entries = JSON.parse(s);
+      else entries = defaultEntries;
+    }
+    // One-time migration: remove the hardcoded default "Eating Out" entry
+    const before = entries.length;
+    entries = entries.filter(e => !(e.name === 'Eating Out' && e.frequency === 'weekly' && e.dayOfWeek === 6));
+    if (entries.length !== before) saveEntries();
   } catch { entries = defaultEntries; }
 }
 function saveEntries() {
