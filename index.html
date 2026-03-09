@@ -1177,25 +1177,46 @@
     border-top: 1px solid var(--border);
   }
 
-  /* MOBILE */
+  /* ── MOBILE MENU BUTTON ─────────────────────────────── */
   .mob-menu-btn {
     display: none;
     background: none;
     border: 1px solid var(--border2);
     color: var(--text-dim);
     font-size: 18px;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     cursor: pointer;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    border-radius: 3px;
+    -webkit-tap-highlight-color: transparent;
   }
 
+  /* ── BOTTOM NAV BAR (mobile) ─────────────────────────── */
+  .mob-bottom-nav {
+    display: none;
+  }
+
+  /* ── TABLET (≤ 900px) ────────────────────────────────── */
+  @media (max-width: 900px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .salary-grid { grid-template-columns: 1fr !important; padding: 16px !important; }
+    .savings-grid { grid-template-columns: 1fr !important; padding: 16px !important; }
+    .balances-grid { grid-template-columns: 1fr !important; padding: 16px !important; }
+    .dash-lower-row { grid-template-columns: 1fr !important; }
+  }
+
+  /* ── PHONE (≤ 768px) ─────────────────────────────────── */
   @media (max-width: 768px) {
+
+    /* ── Core layout ── */
+    body { -webkit-text-size-adjust: 100%; }
+
     header {
-      padding: 0 16px;
-      height: 52px;
+      padding: 0 14px;
+      height: 54px;
       position: fixed;
       width: 100%;
       box-sizing: border-box;
@@ -1203,89 +1224,206 @@
 
     .mob-menu-btn { display: flex; }
 
+    /* Slide-down nav drawer */
     .header-nav {
       display: none;
       position: fixed;
-      top: 52px;
+      top: 54px;
       left: 0; right: 0;
       background: var(--surface);
-      border-bottom: 1px solid var(--border);
+      border-bottom: 2px solid var(--border2);
       flex-direction: column;
       gap: 0;
-      z-index: 200;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.18);
-      padding: 8px 0;
+      z-index: 300;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.22);
+      padding: 6px 0 12px;
+      max-height: calc(100vh - 54px);
+      overflow-y: auto;
     }
     .header-nav.mob-open { display: flex; }
 
     .nav-btn {
       width: 100%;
       text-align: left;
-      padding: 14px 24px;
+      padding: 15px 22px;
       font-size: 13px;
+      letter-spacing: 0.1em;
       border: none;
       border-bottom: 1px solid var(--border);
+      border-radius: 0;
+      min-height: 50px;
+      -webkit-tap-highlight-color: transparent;
     }
     .nav-btn:last-child { border-bottom: none; }
+    .nav-btn.active { border-left: 3px solid var(--amber); padding-left: 19px; }
 
-    .app { height: auto; min-height: calc(100vh - 52px); margin-top: 52px; }
+    /* App shell */
+    .app {
+      height: auto;
+      min-height: calc(100svh - 54px);
+      margin-top: 54px;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
     .main { overflow-y: visible; }
-    .view { min-height: calc(100vh - 52px); }
+    .view { min-height: calc(100svh - 54px); }
+    .view.active { height: auto; }
 
-    /* Stats row stack */
-    .stats-row { grid-template-columns: 1fr 1fr !important; }
+    /* ── Stats row ── */
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .stat-card { padding: 14px 16px; }
+    .stat-value { font-size: 20px; }
+    .stat-label { font-size: 8px; }
 
-    /* Chart area */
-    .chart-area { padding: 14px 16px; }
+    /* ── Charts ── */
+    .chart-area { padding: 14px 14px 12px; }
     .chart-header { flex-direction: column; gap: 10px; align-items: flex-start !important; }
-    .chart-wrap { height: 220px !important; }
+    .chart-wrap { height: 180px !important; }
     .slider-container { flex-wrap: wrap; gap: 6px; }
+    input[type=range] { width: 150px; }
 
-    /* Dashboard lower panels — stack vertically */
+    /* ── Dashboard lower ── */
     .dash-lower-row { grid-template-columns: 1fr !important; }
+    .dash-lower { grid-template-columns: 1fr !important; }
+    .dash-pie-area { border-left: none !important; border-top: 1px solid var(--border); }
 
-    /* Schedule */
-    .sched-person-header, .sched-cat-header { padding: 10px 14px; }
-    .schedule-table td { padding: 8px 10px; font-size: 11px; }
+    /* ── Schedule ── */
+    .sched-person-header { padding: 12px 14px; }
+    .sched-cat-header { padding: 8px 14px; }
+    .schedule-table th { padding: 8px 10px; font-size: 8px; position: static; }
+    .schedule-table td { padding: 10px 10px; font-size: 11px; }
+    /* Hide less critical columns on small screens */
+    .schedule-table .col-next,
+    .schedule-table .col-annual { display: none; }
 
-    /* Salary/savings grids */
-    .salary-grid { grid-template-columns: 1fr !important; padding: 16px !important; }
-    .savings-grid { grid-template-columns: 1fr !important; padding: 16px !important; }
-    .savings-month-grid { grid-template-columns: repeat(3, 1fr) !important; }
-    .savings-full { grid-column: 1 !important; }
+    /* ── Calendar ── */
+    .calendar-area { padding: 12px 10px; }
+    .calendar-grid { gap: 1px; }
+    .cal-day { min-height: 58px; padding: 5px 4px; }
+    .cal-day-num { font-size: 10px; }
+    .cal-chip { font-size: 8px; padding: 1px 3px; }
+    .cal-day-total { font-size: 10px; }
+    .cal-day-header { font-size: 8px; padding: 5px 0; }
+    .cal-month-title { font-size: 12px; }
+    .cal-nav-btn { width: 36px; height: 36px; font-size: 16px; }
 
-    /* Mortgage */
+    /* ── Salary ── */
+    .salary-grid { grid-template-columns: 1fr !important; padding: 14px !important; gap: 14px !important; }
+    .salary-card-body { padding: 14px; }
+    .salary-input-row { grid-template-columns: 1fr !important; }
+    .salary-pay-day { flex-wrap: wrap; gap: 8px; }
+
+    /* ── Mortgage ── */
+    .page-padding { padding: 14px !important; }
     .salary-card-body > div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
 
-    /* Balances */
-    .balances-grid { grid-template-columns: 1fr !important; padding: 16px !important; }
+    /* ── Balances ── */
+    .balances-grid { grid-template-columns: 1fr !important; padding: 14px !important; gap: 14px !important; }
+    .balance-field-row { grid-template-columns: 1fr !important; }
+    .variance-row { grid-template-columns: 1fr 1fr !important; }
 
-    /* Actuals */
-    .actuals-input-row { grid-template-columns: 1fr 1fr !important; }
-    .actuals-toolbar { flex-wrap: wrap; gap: 8px; padding: 12px 16px; }
+    /* ── Savings ── */
+    .savings-grid { grid-template-columns: 1fr !important; padding: 14px !important; gap: 14px !important; }
+    .savings-month-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 5px !important; }
+    .savings-full { grid-column: 1 !important; }
+    .savings-summary-bar { grid-template-columns: 1fr 1fr !important; }
+    .savings-summary-cell:nth-child(2) { border-right: none; }
+    .savings-input-row { grid-template-columns: 1fr 1fr !important; }
 
-    /* Modals */
-    .modal { width: 95vw !important; max-height: 90vh; overflow-y: auto; }
+    /* ── Actuals ── */
+    .actuals-toolbar { flex-wrap: wrap; gap: 8px; padding: 12px 14px; }
+    .actuals-body { padding: 14px; }
+    .actuals-input-row {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 8px !important;
+      padding: 12px !important;
+    }
+    .actuals-input-row > div:last-child { grid-column: 1 / -1; }
+    .actuals-entry-table td { padding: 9px 10px; font-size: 11px; }
 
-    /* Forms */
-    .form-row { flex-direction: column !important; }
-    .form-group { width: 100% !important; }
+    /* ── Modals ── */
+    .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
+    .modal {
+      width: 100% !important;
+      max-width: 100% !important;
+      max-height: 92svh !important;
+      border-radius: 14px 14px 0 0 !important;
+      border-left: none !important;
+      border-right: none !important;
+      border-bottom: none !important;
+      animation: slideUpSheet 0.28s cubic-bezier(0.32,0.72,0,1) !important;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    @keyframes slideUpSheet {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    .modal-header { padding: 16px 20px 14px; }
+    .modal-body { padding: 16px 20px; }
+    .modal-footer { padding: 14px 20px; flex-direction: column-reverse; gap: 8px; }
+    .modal-footer .btn { width: 100%; text-align: center; padding: 14px; font-size: 12px; }
 
-    /* Calendar */
-    .calendar-grid { font-size: 11px; }
-    .cal-day { min-height: 52px; }
+    /* Drag handle hint */
+    .modal-header::before {
+      content: '';
+      display: block;
+      width: 36px;
+      height: 4px;
+      background: var(--border2);
+      border-radius: 2px;
+      margin: 0 auto 14px;
+    }
 
-    /* Pie chart area */
-    .dash-pie-row { grid-template-columns: 1fr !important; }
+    /* ── Forms ── */
+    .form-row { grid-template-columns: 1fr !important; }
+    .form-group { width: 100% !important; margin-bottom: 14px; }
+    .form-input, .form-select {
+      font-size: 16px !important; /* prevent iOS zoom */
+      padding: 11px 12px !important;
+    }
+    select.form-select { font-size: 16px !important; }
 
-    /* Page padding */
-    .page-padding { padding: 16px !important; }
+    /* ── Inputs: prevent iOS zoom ── */
+    input[type=text],
+    input[type=number],
+    input[type=date],
+    input[type=email],
+    input[type=password],
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+    .salary-input { font-size: 16px !important; padding: 11px 12px !important; }
+
+    /* ── Buttons: bigger tap targets ── */
+    .btn { min-height: 44px; }
+    .delete-btn { padding: 6px 10px; font-size: 16px; min-width: 36px; min-height: 36px; }
+    .cal-nav-btn { min-width: 40px; min-height: 40px; }
+    .person-tab { padding: 8px 14px; min-height: 38px; }
+    .nav-btn { min-height: 50px; }
+    .pay-day-select { font-size: 16px !important; padding: 8px 12px; }
+
+    /* ── Tables: horizontal scroll on overflow ── */
+    .history-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .schedule-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* ── Misc ── */
+    .section-header { flex-wrap: wrap; gap: 8px; }
+    .person-tabs { flex-wrap: wrap; }
   }
 
+  /* ── SMALL PHONE (≤ 480px) ──────────────────────────── */
   @media (max-width: 480px) {
-    .stats-row { grid-template-columns: 1fr !important; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .stat-card { padding: 12px 12px; }
+    .stat-value { font-size: 18px; }
     .savings-month-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .savings-summary-bar { grid-template-columns: 1fr 1fr !important; }
     .actuals-input-row { grid-template-columns: 1fr !important; }
+    .variance-row { grid-template-columns: 1fr !important; }
+    .calendar-area { padding: 10px 6px; }
+    .cal-day { min-height: 52px; padding: 4px 3px; }
+    .chart-wrap { height: 160px !important; }
+    .salary-input-row { grid-template-columns: 1fr !important; }
   }
 </style>
 </head>
@@ -3958,7 +4096,7 @@ function renderSchedule() {
         <span class="sched-cat-subtotal">~£${catTotal.toFixed(2)}/mo</span>
       </div>`;
 
-      html += `<table class="schedule-table" style="margin-bottom:0;">
+      html += `<div class="schedule-table-wrap"><table class="schedule-table" style="margin-bottom:0;">
         <tbody>`;
 
       catEntries.forEach(e => {
@@ -3969,9 +4107,9 @@ function renderSchedule() {
             ${e.name}
           </td>
           <td><span class="freq-badge">${e.frequency}</span></td>
-          <td>${getScheduleStr(e)}</td>
+          <td class="col-next">${getScheduleStr(e)}</td>
           <td class="td-amount">£${e.amount.toFixed(2)}</td>
-          <td style="color:var(--text-muted);font-size:11px;">~£${calcMonthlyEquiv(e).toFixed(2)}/mo</td>
+          <td class="col-annual" style="color:var(--text-muted);font-size:11px;">~£${calcMonthlyEquiv(e).toFixed(2)}/mo</td>
           <td>
             <span class="active-dot" style="background:${e.active ? '#4caf7d' : '#555'}"></span>
             <span style="font-size:11px;">${e.active ? 'Active' : 'Paused'}</span>
@@ -3983,7 +4121,7 @@ function renderSchedule() {
         </tr>`;
       });
 
-      html += `</tbody></table>`;
+      html += `</tbody></table></div>`;
     });
   });
 
@@ -4216,6 +4354,8 @@ function switchView(view) {
   });
   // Close mobile menu if open
   document.getElementById('header-nav').classList.remove('mob-open');
+  // Scroll to top on mobile when switching views
+  if (window.innerWidth <= 768) window.scrollTo({ top: 0, behavior: 'instant' });
 
   if (view === 'dashboard') { renderStats(); renderChart(); }
   if (view === 'schedule') renderSchedule();
