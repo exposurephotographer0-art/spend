@@ -2718,7 +2718,7 @@ function linkMortgageOverpay() {
     amount: mortgage.overpay,
     frequency: 'monthly',
     dayOfMonth: Math.min(mortgage.payday || 1, 28),
-    color: '#9ec956',
+    color: '#b06af5',
     active: true,
     _mortgageOverpay: true,
   };
@@ -4052,9 +4052,8 @@ function calcMonthlyEquiv(e) {
 function renderSchedule() {
   const container = document.getElementById('scheduleContainer');
 
-  // Filter entries — exclude _mortgageOverpay (phantom entry; overpayment is tracked via
-  // mortgage.overpayMonths and already included in calcStats via mortgageOvpExtra)
-  const filtered = entries.filter(e => !e._mortgageOverpay && (personFilter === 'all' || (e.owner || 'joint') === personFilter));
+  // Filter entries
+  const filtered = entries.filter(e => personFilter === 'all' || (e.owner || 'joint') === personFilter);
 
   if (filtered.length === 0) {
     container.innerHTML = `<div class="empty-state">No entries found. Click + to add one.</div>`;
