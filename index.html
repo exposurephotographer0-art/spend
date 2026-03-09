@@ -3456,7 +3456,7 @@ function renderPieChart() {
   const legendEl = document.getElementById('pieLegend');
   if (!canvas || !legendEl) return;
 
-  const active = entries.filter(e => e.active && !e._mortgageOverpay);
+  const active = entries.filter(e => e.active);
   const monthly = (e) => {
     if (e.frequency === 'weekly')  return e.amount * 4.33;
     if (e.frequency === 'monthly') return e.amount;
@@ -4332,6 +4332,9 @@ function saveEntry() {
     const idx = entries.findIndex(x => x.id === editingId);
     if (idx !== -1) {
       entry.active = entries[idx].active;
+      // Preserve internal mortgage flags so editing doesn't strip them
+      if (entries[idx]._mortgagePayment) entry._mortgagePayment = true;
+      if (entries[idx]._mortgageOverpay)  entry._mortgageOverpay  = true;
       entries[idx] = entry;
     }
   } else {
