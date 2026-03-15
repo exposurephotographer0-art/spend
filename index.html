@@ -3354,6 +3354,17 @@ function renderChart() {
 
   const showLegend = hasSalary || hasBalances || savingsLine;
 
+  // Register a mobile-friendly tooltip positioner that pins to the top of
+  // the chart area so it never overlaps the bars/lines on small screens.
+  if (!Chart.Tooltip.positioners.mobileTop) {
+    Chart.Tooltip.positioners.mobileTop = function(elements) {
+      if (!elements.length) return false;
+      const ca = this.chart.chartArea;
+      return { x: (ca.left + ca.right) / 2, y: ca.top + 4 };
+    };
+  }
+  const isMobile = window.innerWidth <= 768;
+
   chartInstance = new Chart(ctx, {
     type: 'bar',
     data: { labels: fmtLabels, datasets },
@@ -3373,13 +3384,15 @@ function renderChart() {
           }
         },
         tooltip: {
+          position: isMobile ? 'mobileTop' : 'average',
           backgroundColor: '#ffffff',
           borderColor: '#e2ddd7',
           borderWidth: 1,
           titleColor: '#5a5a5a',
           bodyColor: '#1a1a1a',
-          titleFont: { family: 'IBM Plex Mono', size: 10 },
-          bodyFont: { family: 'IBM Plex Mono', size: 11 },
+          titleFont: { family: 'IBM Plex Mono', size: isMobile ? 9 : 10 },
+          bodyFont: { family: 'IBM Plex Mono', size: isMobile ? 10 : 11 },
+          padding: isMobile ? 8 : 12,
           callbacks: {
             label: ctx => {
               if (ctx.raw === null || ctx.raw === undefined) return null;
@@ -5019,6 +5032,10 @@ async function bootApp(allData) {
       else b.classList.remove('active');
     });
   }
+
+  // Restore inputs for the initial view before renderAll() runs,
+  // so recalcMortgage() can't overwrite saved data with empty-input zeros.
+  if (currentView === 'mortgage') restoreMortgageInputs();
 
   hideLoader();
   renderAll();
