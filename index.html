@@ -2020,6 +2020,17 @@
   </div>
 </div>
 
+<!-- CALENDAR DAY MODAL -->
+<div class="modal-overlay" id="calDayModalOverlay" onclick="if(event.target===this)closeCalDayModal()">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <span class="modal-title" id="calDayModalTitle">—</span>
+      <button class="modal-close" onclick="closeCalDayModal()">×</button>
+    </div>
+    <div class="modal-body" id="calDayModalBody" style="max-height:70vh;overflow-y:auto;"></div>
+  </div>
+</div>
+
 <!-- MODAL -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
@@ -2065,7 +2076,10 @@
         <label class="form-label">Frequency</label>
         <select class="form-select" id="fFrequency" onchange="updateFreqFields()">
           <option value="weekly">Weekly</option>
+          <option value="fortnightly">Fortnightly</option>
           <option value="monthly">Monthly</option>
+          <option value="quarterly">Quarterly</option>
+          <option value="biannually">Bi-annually</option>
           <option value="yearly">Yearly</option>
         </select>
       </div>
@@ -2970,12 +2984,45 @@ function getOccurrencesInRange(entry, startDate, endDate) {
       d.setDate(d.getDate() + 1);
       if (dates.length > 0) { d.setDate(d.getDate() + 6); } // jump week
     }
+  } else if (entry.frequency === 'fortnightly') {
+    // startDate is a YYYY-MM-DD string representing the first occurrence
+    if (!entry.startDate) return dates;
+    let d = new Date(entry.startDate); d.setHours(0,0,0,0);
+    // Fast-forward to first occurrence on or after s
+    if (d < s) {
+      const diffDays = Math.ceil((s - d) / (14 * 24 * 3600 * 1000));
+      d.setDate(d.getDate() + diffDays * 14);
+    }
+    while (d <= e) {
+      if (d >= s) dates.push(new Date(d));
+      d.setDate(d.getDate() + 14);
+    }
   } else if (entry.frequency === 'monthly') {
     let d = new Date(s.getFullYear(), s.getMonth(), entry.dayOfMonth);
     if (d < s) d.setMonth(d.getMonth() + 1);
     while (d <= e) {
       dates.push(new Date(d));
       d.setMonth(d.getMonth() + 1);
+      d.setDate(entry.dayOfMonth);
+    }
+  } else if (entry.frequency === 'quarterly') {
+    const firstMon = (entry.month || 1) - 1;
+    let d = new Date(s.getFullYear(), firstMon, entry.dayOfMonth);
+    // Align to the first quarterly occurrence on or after s
+    while (d < s) d.setMonth(d.getMonth() + 3);
+    while (d <= e) {
+      dates.push(new Date(d));
+      d.setMonth(d.getMonth() + 3);
+      d.setDate(entry.dayOfMonth);
+    }
+  } else if (entry.frequency === 'biannually') {
+    const firstMon = (entry.month || 1) - 1;
+    let d = new Date(s.getFullYear(), firstMon, entry.dayOfMonth);
+    // Align to the first bi-annual occurrence on or after s
+    while (d < s) d.setMonth(d.getMonth() + 6);
+    while (d <= e) {
+      dates.push(new Date(d));
+      d.setMonth(d.getMonth() + 6);
       d.setDate(entry.dayOfMonth);
     }
   } else if (entry.frequency === 'yearly') {
@@ -3083,9 +3130,12 @@ function calcStats() {
   const active = entries.filter(e => e.active && !e._mortgageOverpay);
   
   const monthly = (arr) => arr.reduce((s, e) => {
-    if (e.frequency === 'weekly') return s + e.amount * 4.33;
-    if (e.frequency === 'monthly') return s + e.amount;
-    if (e.frequency === 'yearly') return s + e.amount / 12;
+    if (e.frequency === 'weekly')      return s + e.amount * 4.33;
+    if (e.frequency === 'fortnightly') return s + e.amount * 26 / 12;
+    if (e.frequency === 'monthly')     return s + e.amount;
+    if (e.frequency === 'quarterly')   return s + e.amount / 3;
+    if (e.frequency === 'biannually')  return s + e.amount / 6;
+    if (e.frequency === 'yearly')      return s + e.amount / 12;
     return s;
   }, 0);
 
@@ -3658,12 +3708,19 @@ function exportChartCSV() {
   const activeEntries = entries.filter(e => !e._mortgagePayment && !e._mortgageOverpay);
   // Group by category then sort by monthly cost desc
   const catOrder = getCategoryOrder();
+  const toMonthly = e => {
+    if (e.frequency === 'weekly')      return e.amount * 4.33;
+    if (e.frequency === 'fortnightly') return e.amount * 26 / 12;
+    if (e.frequency === 'monthly')     return e.amount;
+    if (e.frequency === 'quarterly')   return e.amount / 3;
+    if (e.frequency === 'biannually')  return e.amount / 6;
+    if (e.frequency === 'yearly')      return e.amount / 12;
+    return 0;
+  };
   const sorted = [...activeEntries].sort((a, b) => {
     const ci = catOrder.indexOf(a.category) - catOrder.indexOf(b.category);
     if (ci !== 0) return ci;
-    const monthlyA = a.frequency === 'weekly' ? a.amount * 4.33 : a.frequency === 'monthly' ? a.amount : a.amount / 12;
-    const monthlyB = b.frequency === 'weekly' ? b.amount * 4.33 : b.frequency === 'monthly' ? b.amount : b.amount / 12;
-    return monthlyB - monthlyA;
+    return toMonthly(b) - toMonthly(a);
   });
 
   const DAYS_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -3676,14 +3733,17 @@ function exportChartCSV() {
       if (prevCat !== null) sections.push(['  ' + prevCat + ' subtotal', '', '', '', '', '', fmtNum(catMonthly), fmtNum(catAnnual)]);
       catMonthly = 0; catAnnual = 0; prevCat = e.category;
     }
-    const monthly = e.frequency === 'weekly' ? e.amount * 4.33 : e.frequency === 'monthly' ? e.amount : e.amount / 12;
+    const monthly = toMonthly(e);
     const annual  = monthly * 12;
     catMonthly += e.active ? monthly : 0;
     catAnnual  += e.active ? annual  : 0;
     let sched = '';
-    if (e.frequency === 'weekly')  sched = 'Every ' + (DAYS_NAMES[e.dayOfWeek] || '');
-    if (e.frequency === 'monthly') sched = ordinal(e.dayOfMonth) + ' of month';
-    if (e.frequency === 'yearly')  sched = (MON_NAMES[(e.month||1)-1] || '') + ' ' + ordinal(e.dayOfMonth);
+    if (e.frequency === 'weekly')      sched = 'Every ' + (DAYS_NAMES[(e.dayOfWeek + 1) % 7] || '');
+    if (e.frequency === 'fortnightly') sched = 'Fortnightly from ' + (e.startDate || '') + ' (' + (DAYS_OF_WEEK[e.dayOfWeek] || '') + 's)';
+    if (e.frequency === 'monthly')     sched = ordinal(e.dayOfMonth) + ' of month';
+    if (e.frequency === 'quarterly')   sched = 'Quarterly from ' + (MON_NAMES[(e.month||1)-1] || '') + ' ' + ordinal(e.dayOfMonth);
+    if (e.frequency === 'biannually')  sched = 'Bi-annually from ' + (MON_NAMES[(e.month||1)-1] || '') + ' ' + ordinal(e.dayOfMonth);
+    if (e.frequency === 'yearly')      sched = (MON_NAMES[(e.month||1)-1] || '') + ' ' + ordinal(e.dayOfMonth);
     sections.push([
       e.name,
       catDisplayName(e.category),
@@ -3712,12 +3772,7 @@ function exportChartCSV() {
   allCats.forEach(cat => {
     const catEntries = activeEntries.filter(e => e.active && e.category === cat);
     if (!catEntries.length) return;
-    const m = catEntries.reduce((s, e) => {
-      if (e.frequency === 'weekly')  return s + e.amount * 4.33;
-      if (e.frequency === 'monthly') return s + e.amount;
-      if (e.frequency === 'yearly')  return s + e.amount / 12;
-      return s;
-    }, 0);
+    const m = catEntries.reduce((s, e) => s + toMonthly(e), 0);
     const pct = stats.monthlyTotal > 0 ? (m / stats.monthlyTotal * 100).toFixed(1) + '%' : '';
     sections.push([catDisplayName(cat), fmtNum(m), fmtNum(m * 12), pct]);
   });
@@ -3813,9 +3868,12 @@ function renderPieChart() {
 
   const active = entries.filter(e => e.active);
   const monthly = (e) => {
-    if (e.frequency === 'weekly')  return e.amount * 4.33;
-    if (e.frequency === 'monthly') return e.amount;
-    if (e.frequency === 'yearly')  return e.amount / 12;
+    if (e.frequency === 'weekly')      return e.amount * 4.33;
+    if (e.frequency === 'fortnightly') return e.amount * 26 / 12;
+    if (e.frequency === 'monthly')     return e.amount;
+    if (e.frequency === 'quarterly')   return e.amount / 3;
+    if (e.frequency === 'biannually')  return e.amount / 6;
+    if (e.frequency === 'yearly')      return e.amount / 12;
     return 0;
   };
 
@@ -3827,10 +3885,15 @@ function renderPieChart() {
     catMap[e.category] = (catMap[e.category] || 0) + m;
   });
 
+  // Add Savings as its own slice (not in entries[] so no double-counting)
+  const savingsMonthly = getDefaultSavingAmount('ash') + getDefaultSavingAmount('henry');
+  if (savingsMonthly > 0) catMap['Savings'] = savingsMonthly;
+
   const cats = Object.keys(catMap).sort((a,b) => catMap[b] - catMap[a]);
   const vals = cats.map(c => catMap[c]);
   const total = vals.reduce((s,v) => s+v, 0);
   const colors = cats.map(c => {
+    if (c === 'Savings') return '#5b9cf6'; // blue for savings
     // cats contains display names; find the underlying key
     const key = getCategoryKeys().find(k => (categoryRenames[k] || k) === c) || c;
     return getCatColor(key);
@@ -4356,9 +4419,12 @@ function renderSidebar() {
 }
 
 function getScheduleStr(e) {
-  if (e.frequency === 'weekly') return `Every ${DAYS_OF_WEEK[e.dayOfWeek]}`;
-  if (e.frequency === 'monthly') return `Monthly on ${ordinal(e.dayOfMonth)}`;
-  if (e.frequency === 'yearly') return `${MONTHS[e.month-1]} ${ordinal(e.dayOfMonth)} yearly`;
+  if (e.frequency === 'weekly')      return `Every ${DAYS_OF_WEEK[e.dayOfWeek]}`;
+  if (e.frequency === 'fortnightly') return `Fortnightly (${DAYS_OF_WEEK[e.dayOfWeek]}s)`;
+  if (e.frequency === 'monthly')     return `Monthly on ${ordinal(e.dayOfMonth)}`;
+  if (e.frequency === 'quarterly')   return `Quarterly from ${MONTHS[(e.month||1)-1]} ${ordinal(e.dayOfMonth)}`;
+  if (e.frequency === 'biannually')  return `Bi-annually from ${MONTHS[(e.month||1)-1]} ${ordinal(e.dayOfMonth)}`;
+  if (e.frequency === 'yearly')      return `${MONTHS[e.month-1]} ${ordinal(e.dayOfMonth)} yearly`;
   return '';
 }
 
@@ -4539,7 +4605,7 @@ function renderCalendar() {
     
     const overflow = dayEntries.length > 3 ? `<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);">+${dayEntries.length-3} more</div>` : '';
     
-    html += `<div class="cal-day${isToday ? ' today' : ''}">
+    html += `<div class="cal-day${isToday ? ' today' : ''}" onclick="openCalDayModal(${year},${month},${day})" style="cursor:pointer;">
       <div class="cal-day-num">${day}</div>
       ${total > 0 ? `<div class="cal-day-total">£${total.toFixed(2)}</div>` : ''}
       <div class="cal-day-chips">${chips}${overflow}</div>
@@ -4589,6 +4655,42 @@ function closeModal() {
   editingId = null;
 }
 
+function openCalDayModal(year, month, day) {
+  const date = new Date(year, month, day);
+  const dowName = DAYS_OF_WEEK[(date.getDay() + 6) % 7]; // Mon=0…Sun=6
+  document.getElementById('calDayModalTitle').textContent =
+    `${dowName} ${ordinal(day)} ${MONTHS_FULL[month]} ${year}`;
+
+  const dayTotals = getDailyTotalsForMonth(year, month);
+  const dayEntries = dayTotals[day] || [];
+
+  if (dayEntries.length === 0) {
+    document.getElementById('calDayModalBody').innerHTML =
+      `<div style="font-family:var(--mono);font-size:12px;color:var(--text-muted);padding:12px 0;">No payments on this day.</div>`;
+  } else {
+    const total = dayEntries.reduce((s, e) => s + e.amount, 0);
+    document.getElementById('calDayModalBody').innerHTML =
+      dayEntries.map(e => `
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
+          <span style="width:11px;height:11px;border-radius:50%;background:${e.color};flex-shrink:0;display:inline-block;"></span>
+          <div style="flex:1;font-family:var(--mono);font-size:12px;min-width:0;">
+            <div style="color:var(--text-primary);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.name}</div>
+            <div style="color:var(--text-muted);font-size:10px;">${catDisplayName(e.category)} · ${e.owner || 'joint'} · ${getScheduleStr(entries.find(x=>x.name===e.name&&x.active)||{frequency:''})}</div>
+          </div>
+          <span style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;">£${e.amount.toFixed(2)}</span>
+        </div>`).join('') +
+      `<div style="display:flex;justify-content:space-between;padding:10px 0 2px;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text-primary);">
+        <span>Total</span><span>£${total.toFixed(2)}</span>
+      </div>`;
+  }
+
+  document.getElementById('calDayModalOverlay').classList.add('open');
+}
+
+function closeCalDayModal() {
+  document.getElementById('calDayModalOverlay').classList.remove('open');
+}
+
 function renderColorPicker() {
   document.getElementById('colorPicker').innerHTML = COLORS.map(c =>
     `<div class="color-swatch${c === selectedColor ? ' selected' : ''}" 
@@ -4614,6 +4716,21 @@ function updateFreqFields(entry = null) {
         ${DAYS_OF_WEEK.map((d,i) => `<option value="${i}"${i==val?' selected':''}>${d}</option>`).join('')}
       </select>
     </div>`;
+  } else if (freq === 'fortnightly') {
+    const dow = entry && entry.frequency === 'fortnightly' ? entry.dayOfWeek : 0;
+    const sd  = entry && entry.frequency === 'fortnightly' && entry.startDate ? entry.startDate : new Date().toISOString().slice(0,10);
+    html = `<div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Day of Week</label>
+        <select class="form-select" id="fDayOfWeek">
+          ${DAYS_OF_WEEK.map((d,i) => `<option value="${i}"${i==dow?' selected':''}>${d}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">First Payment Date</label>
+        <input type="date" class="form-input" id="fStartDate" value="${sd}">
+      </div>
+    </div>`;
   } else if (freq === 'monthly') {
     const val = entry && entry.frequency === 'monthly' ? entry.dayOfMonth : 1;
     html = `<div class="form-group">
@@ -4621,6 +4738,40 @@ function updateFreqFields(entry = null) {
       <select class="form-select" id="fDayOfMonth">
         ${Array.from({length:28},(_,i)=>i+1).map(d => `<option value="${d}"${d==val?' selected':''}>${ordinal(d)}</option>`).join('')}
       </select>
+    </div>`;
+  } else if (freq === 'quarterly') {
+    const dom = entry && entry.frequency === 'quarterly' ? entry.dayOfMonth : 1;
+    const mon = entry && entry.frequency === 'quarterly' ? entry.month : 1;
+    html = `<div class="form-row">
+      <div class="form-group">
+        <label class="form-label">First Payment Month</label>
+        <select class="form-select" id="fMonth">
+          ${MONTHS_FULL.map((m,i) => `<option value="${i+1}"${(i+1)==mon?' selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Day of Month</label>
+        <select class="form-select" id="fDayOfMonth">
+          ${Array.from({length:28},(_,i)=>i+1).map(d => `<option value="${d}"${d==dom?' selected':''}>${ordinal(d)}</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+  } else if (freq === 'biannually') {
+    const dom = entry && entry.frequency === 'biannually' ? entry.dayOfMonth : 1;
+    const mon = entry && entry.frequency === 'biannually' ? entry.month : 1;
+    html = `<div class="form-row">
+      <div class="form-group">
+        <label class="form-label">First Payment Month</label>
+        <select class="form-select" id="fMonth">
+          ${MONTHS_FULL.map((m,i) => `<option value="${i+1}"${(i+1)==mon?' selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Day of Month</label>
+        <select class="form-select" id="fDayOfMonth">
+          ${Array.from({length:28},(_,i)=>i+1).map(d => `<option value="${d}"${d==dom?' selected':''}>${ordinal(d)}</option>`).join('')}
+        </select>
+      </div>
     </div>`;
   } else if (freq === 'yearly') {
     const dom = entry && entry.frequency === 'yearly' ? entry.dayOfMonth : 1;
@@ -4676,7 +4827,16 @@ function saveEntry() {
   
   if (frequency === 'weekly') {
     entry.dayOfWeek = parseInt(document.getElementById('fDayOfWeek').value);
+  } else if (frequency === 'fortnightly') {
+    entry.dayOfWeek = parseInt(document.getElementById('fDayOfWeek').value);
+    entry.startDate = document.getElementById('fStartDate').value;
   } else if (frequency === 'monthly') {
+    entry.dayOfMonth = parseInt(document.getElementById('fDayOfMonth').value);
+  } else if (frequency === 'quarterly') {
+    entry.month = parseInt(document.getElementById('fMonth').value);
+    entry.dayOfMonth = parseInt(document.getElementById('fDayOfMonth').value);
+  } else if (frequency === 'biannually') {
+    entry.month = parseInt(document.getElementById('fMonth').value);
     entry.dayOfMonth = parseInt(document.getElementById('fDayOfMonth').value);
   } else if (frequency === 'yearly') {
     entry.month = parseInt(document.getElementById('fMonth').value);
@@ -5336,7 +5496,7 @@ document.getElementById('modalOverlay').addEventListener('click', function(e) {
 });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Escape') { closeModal(); closeCalDayModal(); }
 });
 
 // ─────────────────────────────────────────
