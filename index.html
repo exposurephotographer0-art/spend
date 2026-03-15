@@ -1481,8 +1481,14 @@
       <div class="stats-row" id="statsRow"></div>
       <div class="chart-area" style="border-bottom:1px solid var(--border);">
         <div class="chart-header">
-          <div class="chart-title">Daily Expenditure Forecast</div>
+          <div>
+            <div class="chart-title">Daily Cash Flow — 60 days history + forecast</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:3px;letter-spacing:0.06em;">Grey = past (projected) &nbsp;·&nbsp; ▼ = today &nbsp;·&nbsp; Amber dots = actual balance snapshots</div>
+          </div>
           <div class="chart-controls">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+              <button onclick="exportChartCSV()" style="font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border2);color:var(--text-dim);padding:5px 12px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='var(--amber)';this.style.borderColor='var(--amber)'" onmouseout="this.style.color='var(--text-dim)';this.style.borderColor='var(--border2)'" title="Download chart data as CSV to share with Claude">⬇ Export CSV</button>
+            </div>
             <div class="slider-container">
               <span class="slider-label">Forecast window</span>
               <input type="range" id="forecastSlider" min="7" max="365" value="90" step="1">
@@ -2093,6 +2099,7 @@ let editingId = null;
 let selectedColor = COLORS[0];
 let chartInstance = null;
 let calendarDate = new Date();
+let lastChartData = null; // stores most-recently rendered chart data for CSV export
 
 // ─────────────────────────────────────────
 // SALARY DATA
@@ -3167,93 +3174,222 @@ function renderStats() {
 // ─────────────────────────────────────────
 // CHART
 // ─────────────────────────────────────────
+
+// Build projected spend/income for the past histDays days (used for greyed history on chart)
+function buildHistoricalTotals(histDays) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const startDate = new Date(today); startDate.setDate(startDate.getDate() - histDays);
+  const endDate = new Date(today); endDate.setDate(endDate.getDate() - 1); endDate.setHours(23,59,59,999);
+
+  const spend = {};
+  const income = {};
+  for (let i = 0; i < histDays; i++) {
+    const d = new Date(startDate); d.setDate(d.getDate() + i);
+    const k = d.toDateString();
+    spend[k] = 0;
+    income[k] = 0;
+  }
+
+  entries.filter(e => e.active && !e._mortgageOverpay).forEach(entry => {
+    getOccurrencesInRange(entry, startDate, endDate).forEach(date => {
+      const k = date.toDateString();
+      if (k in spend) spend[k] += entry.amount;
+    });
+  });
+
+  ['ash','henry'].forEach(person => {
+    const s = salaries[person];
+    if (!s || !s.monthlyTakeHome) return;
+    let yr = startDate.getFullYear(), mo = startDate.getMonth();
+    if (mo === 0) { yr--; mo = 11; } else mo--;
+    for (let i = 0; i < 200; i++) {
+      const d = getActualPayday(yr, mo, s);
+      if (d > endDate) break;
+      if (d >= startDate) {
+        const k = d.toDateString();
+        if (k in income) income[k] += s.monthlyTakeHome;
+      }
+      mo++;
+      if (mo > 11) { mo = 0; yr++; }
+    }
+  });
+
+  if (mortgage && mortgage.payment && mortgage.payday) {
+    const mortPayLinked = entries.some(e => e._mortgagePayment && e.active);
+    const overpayMonths = mortgage.overpayMonths || {};
+    let d = new Date(startDate.getFullYear(), startDate.getMonth(), mortgage.payday);
+    if (d < startDate) d.setMonth(d.getMonth() + 1);
+    let monthIdx = 0;
+    while (d <= endDate) {
+      const k = d.toDateString();
+      if (!mortPayLinked && k in spend) spend[k] += mortgage.payment;
+      if (mortgage.overpay > 0 && overpayMonths[monthIdx] !== false && k in spend) spend[k] += mortgage.overpay;
+      d = new Date(d.getFullYear(), d.getMonth() + 1, mortgage.payday);
+      monthIdx++;
+    }
+  }
+
+  return { spend, income };
+}
+
 function renderChart() {
   const days = parseInt(document.getElementById('forecastSlider').value);
   document.getElementById('sliderVal').textContent = days + (days === 1 ? ' day' : ' days');
-  
+
+  // ── Build timelines: 60 days history (greyed) + forecast ──
+  const HIST_DAYS = 60;
+
+  const histResult = buildHistoricalTotals(HIST_DAYS);
+  const histLabels  = Object.keys(histResult.spend);
+  const histSpendArr  = histLabels.map(k => histResult.spend[k]);
+  const histIncomeArr = histLabels.map(k => histResult.income[k] || 0);
+
   const { spend, income } = buildDailyTotals(days);
-  const labels = Object.keys(spend);
-  const spendData = Object.values(spend);
-  const incomeData = labels.map(k => income[k] || 0);
-  const hasSalary = Object.values(income).some(v => v > 0);
+  const fwdLabels   = Object.keys(spend);
+  const fwdSpendArr  = Object.values(spend);
+  const fwdIncomeArr = fwdLabels.map(k => income[k] || 0);
 
-  // ── Balance anchoring from actual snapshots ──
-  // Get most recent snapshot per person, use their current A/C as the running balance seed
-  // and savings as a separate line seed
+  const allLabels    = [...histLabels, ...fwdLabels];
+  const allSpendData = [...histSpendArr, ...fwdSpendArr];
+  const allIncomeData = [...histIncomeArr, ...fwdIncomeArr];
+  const todayIdx = HIST_DAYS; // index of today in allLabels
+
+  const hasSalary = allIncomeData.some(v => v > 0);
+
+  // ── Balance anchoring ──
   const today = new Date(); today.setHours(0,0,0,0);
-  const todayStr = today.toDateString();
 
-  const latestAsh = balanceSnapshots.filter(x => x.person === 'ash').sort((a,b) => b.date.localeCompare(a.date))[0];
+  const latestAsh   = balanceSnapshots.filter(x => x.person === 'ash').sort((a,b) => b.date.localeCompare(a.date))[0];
   const latestHenry = balanceSnapshots.filter(x => x.person === 'henry').sort((a,b) => b.date.localeCompare(a.date))[0];
 
   const seedCurrent = (latestAsh ? latestAsh.current : 0) + (latestHenry ? latestHenry.current : 0);
   const seedSavings = (latestAsh ? latestAsh.savings : 0) + (latestHenry ? latestHenry.savings : 0);
   const hasBalances = !!(latestAsh || latestHenry);
 
-  // Find the anchor date — the most recent snapshot date (could be before or equal to today)
   const anchorDateStr = [latestAsh?.date, latestHenry?.date].filter(Boolean).sort().reverse()[0] || null;
 
-  // Calculate spend/income that happened between anchor date and today (to sync starting point)
-  // so the line starts at seedCurrent adjusted to "today" if anchor was in the past
   let adjustedSeedCurrent = seedCurrent;
   if (anchorDateStr) {
     const anchorDate = new Date(anchorDateStr); anchorDate.setHours(0,0,0,0);
     if (anchorDate < today) {
-      // Project forward from anchor to today
-      const bridgeSpend = calcProjectedSpendBetween(anchorDateStr, today.toISOString().slice(0,10));
+      const bridgeSpend  = calcProjectedSpendBetween(anchorDateStr, today.toISOString().slice(0,10));
       const bridgeIncome = calcProjectedIncomeBetween(anchorDateStr, today.toISOString().slice(0,10));
       adjustedSeedCurrent = seedCurrent + bridgeIncome - bridgeSpend;
     }
   }
 
-  // Running balance starting from adjusted seed (or 0 if no balances entered)
-  // Savings contributions debit current account on each person's payday
-  const savingsFlow = getSavingsBetween(null, days, labels);
-
-  const balance = [];
-  let running = hasBalances ? adjustedSeedCurrent : 0;
-  labels.forEach((k, i) => {
-    const savFlow = savingsFlow[k] || { current: 0, savings: 0 };
-    running += incomeData[i] - spendData[i] + savFlow.current;
-    balance.push(running);
-  });
-
-  // Savings line — grows by contributions each payday
+  // Savings flow (covers forward paydays; historical dates return 0)
+  const savingsFlow = getSavingsBetween(null, days, allLabels);
   const hasSavingsContribs = (getDefaultSavingAmount('ash') + getDefaultSavingAmount('henry')) > 0;
-  let savRunning = hasBalances ? seedSavings : (hasSavingsContribs ? 0 : null);
-  const savingsLine = (hasBalances || hasSavingsContribs) ? labels.map(k => {
-    const savFlow = savingsFlow[k] || { current: 0, savings: 0 };
-    savRunning += savFlow.savings;
-    return savRunning;
-  }) : null;
 
-  // Dot markers for actual balance snapshots on the chart
-  const actualDots = labels.map(k => {
-    const d = new Date(k);
-    const dStr = d.toISOString().slice(0,10);
-    const ashSnap = balanceSnapshots.find(s => s.person === 'ash' && s.date === dStr);
-    const henrySnap = balanceSnapshots.find(s => s.person === 'henry' && s.date === dStr);
-    if (ashSnap || henrySnap) {
-      return (ashSnap ? ashSnap.current : 0) + (henrySnap ? henrySnap.current : 0);
+  // ── Build full balance and savings arrays (forward + backward passes) ──
+  // allBalance[i] = end-of-day balance for allLabels[i]
+  // adjustedSeedCurrent = balance at START of today = balance at END of yesterday
+  const allBalance = new Array(allLabels.length).fill(null);
+  const allSavings = new Array(allLabels.length).fill(null);
+  const showBalanceLine = hasBalances || hasSalary;
+  const showSavingsLine = hasSavingsContribs || hasBalances;
+
+  if (showBalanceLine) {
+    // Forward pass: today → end of forecast
+    let runBal = hasBalances ? adjustedSeedCurrent : 0;
+    for (let i = todayIdx; i < allLabels.length; i++) {
+      const savFlow = savingsFlow[allLabels[i]] || { current: 0, savings: 0 };
+      runBal += allIncomeData[i] - allSpendData[i] + savFlow.current;
+      allBalance[i] = runBal;
     }
+    if (hasBalances) {
+      // Backward pass: yesterday → 60 days ago
+      // allBalance[todayIdx-1] = adjustedSeedCurrent (end of yesterday)
+      // then each earlier day subtracts that day's net flow
+      let runBack = adjustedSeedCurrent;
+      for (let i = todayIdx - 1; i >= 0; i--) {
+        allBalance[i] = runBack;
+        runBack -= (allIncomeData[i] - allSpendData[i]);
+      }
+    }
+  } else {
+    // No salary, no balances: cumulative spend forward from today only
+    let cs = 0;
+    for (let i = todayIdx; i < allLabels.length; i++) {
+      cs += allSpendData[i];
+      allBalance[i] = cs;
+    }
+  }
+
+  if (showSavingsLine) {
+    // Forward savings
+    let runSav = hasBalances ? seedSavings : 0;
+    for (let i = todayIdx; i < allLabels.length; i++) {
+      const savFlow = savingsFlow[allLabels[i]] || { current: 0, savings: 0 };
+      runSav += savFlow.savings;
+      allSavings[i] = runSav;
+    }
+    if (hasBalances) {
+      // Backward savings: flat at seedSavings going into the past
+      // (historical savings paydays aren't tracked in getSavingsBetween, so we hold flat)
+      for (let i = todayIdx - 1; i >= 0; i--) allSavings[i] = seedSavings;
+    }
+  }
+
+  // Actual balance snapshot dots — show for all dates (past and future)
+  const actualDots = allLabels.map(k => {
+    const dStr = new Date(k).toISOString().slice(0,10);
+    const ashSnap   = balanceSnapshots.find(s => s.person === 'ash'   && s.date === dStr);
+    const henrySnap = balanceSnapshots.find(s => s.person === 'henry' && s.date === dStr);
+    if (ashSnap || henrySnap) return (ashSnap ? ashSnap.current : 0) + (henrySnap ? henrySnap.current : 0);
     return null;
   });
   const hasAnyDots = actualDots.some(v => v !== null);
 
-  const fmtLabels = labels.map(l => {
+  // Per-element bar colours: grey for past, original for forecast
+  const spendBg  = allLabels.map((_, i) => i < todayIdx ? 'rgba(160,160,160,0.30)' : 'rgba(224,85,85,0.5)');
+  const spendBdr = allLabels.map((_, i) => i < todayIdx ? 'rgba(140,140,140,0.45)' : 'rgba(224,85,85,0.8)');
+  const incBg    = allLabels.map((_, i) => i < todayIdx ? 'rgba(160,160,160,0.18)' : 'rgba(76,175,125,0.5)');
+  const incBdr   = allLabels.map((_, i) => i < todayIdx ? 'rgba(140,140,140,0.35)' : 'rgba(76,175,125,0.8)');
+
+  // Formatted x-axis labels — mark today with a ▼ indicator
+  const fmtLabels = allLabels.map((l, i) => {
     const d = new Date(l);
-    return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+    const base = `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+    return i === todayIdx ? `▼ ${base}` : base;
   });
-  
+
+  // ── Store chart data for CSV export ──
+  lastChartData = allLabels.map((k, i) => ({
+    date:               new Date(k).toISOString().slice(0,10),
+    period:             i < todayIdx ? 'Past' : i === todayIdx ? 'Today' : 'Forecast',
+    dailySpend:         allSpendData[i],
+    salaryIncome:       allIncomeData[i],
+    netFlow:            allIncomeData[i] - allSpendData[i],
+    projectedBalance:   allBalance[i],
+    projectedSavings:   allSavings[i],
+    actualBalance:      actualDots[i],
+  }));
+
+  const lastNonNullBal = [...allBalance].reverse().find(v => v !== null) ?? 0;
+  const balEndPositive = lastNonNullBal >= 0;
+  const showLegend = hasSalary || hasBalances || showSavingsLine;
+
+  // Register mobile-friendly tooltip positioner (once)
+  if (!Chart.Tooltip.positioners.mobileTop) {
+    Chart.Tooltip.positioners.mobileTop = function(elements) {
+      if (!elements.length) return false;
+      const ca = this.chart.chartArea;
+      return { x: (ca.left + ca.right) / 2, y: ca.top + 4 };
+    };
+  }
+  const isMobile = window.innerWidth <= 768;
+
   if (chartInstance) chartInstance.destroy();
   const ctx = document.getElementById('forecastChart').getContext('2d');
-  
+
   const datasets = [
     {
       label: 'Daily Spend',
-      data: spendData,
-      backgroundColor: 'rgba(224,85,85,0.5)',
-      borderColor: 'rgba(224,85,85,0.8)',
+      data: allSpendData,
+      backgroundColor: spendBg,
+      borderColor: spendBdr,
       borderWidth: 1,
       yAxisID: 'y',
       barPercentage: hasSalary ? 0.4 : 0.7,
@@ -3265,9 +3401,9 @@ function renderChart() {
   if (hasSalary) {
     datasets.push({
       label: 'Salary Income',
-      data: incomeData,
-      backgroundColor: 'rgba(76,175,125,0.5)',
-      borderColor: 'rgba(76,175,125,0.8)',
+      data: allIncomeData,
+      backgroundColor: incBg,
+      borderColor: incBdr,
       borderWidth: 1,
       yAxisID: 'y',
       barPercentage: 0.4,
@@ -3276,43 +3412,50 @@ function renderChart() {
     });
   }
 
-  // Running balance / current account line
-  const balEndPositive = balance[balance.length-1] >= 0;
-  datasets.push({
-    label: hasBalances ? 'Current Accounts (projected)' : 'Running Balance',
-    data: balance,
-    type: 'line',
-    borderColor: balEndPositive ? '#1e8a4a' : '#c0392b',
-    backgroundColor: balEndPositive ? 'rgba(30,138,74,0.04)' : 'rgba(192,57,43,0.04)',
-    borderWidth: 2,
-    pointRadius: 0,
-    pointHoverRadius: 4,
-    fill: hasSalary || hasBalances,
-    tension: 0.3,
-    yAxisID: 'y2',
-    order: 1,
-  });
+  if (showBalanceLine) {
+    datasets.push({
+      label: hasBalances ? 'Current Accounts (projected)' : (hasSalary ? 'Running Balance' : 'Cumulative Spend'),
+      data: allBalance,
+      type: 'line',
+      segment: {
+        borderColor: ctx => ctx.p0DataIndex < todayIdx ? 'rgba(155,155,155,0.55)' : (balEndPositive ? '#1e8a4a' : '#c0392b'),
+        borderDash:  ctx => ctx.p0DataIndex < todayIdx ? [4, 3] : [],
+      },
+      borderColor: balEndPositive ? '#1e8a4a' : '#c0392b',
+      backgroundColor: balEndPositive ? 'rgba(30,138,74,0.04)' : 'rgba(192,57,43,0.04)',
+      borderWidth: 2,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      fill: hasBalances || hasSalary,
+      tension: 0.3,
+      yAxisID: 'y2',
+      order: 1,
+      spanGaps: false,
+    });
+  }
 
-  // Savings line
-  if (savingsLine) {
+  if (showSavingsLine) {
     datasets.push({
       label: 'Savings (combined)',
-      data: savingsLine,
+      data: allSavings,
       type: 'line',
+      segment: {
+        borderColor: ctx => ctx.p0DataIndex < todayIdx ? 'rgba(155,155,155,0.45)' : '#5b9cf6',
+        borderDash:  ctx => ctx.p0DataIndex < todayIdx ? [4, 3] : [6, 3],
+      },
       borderColor: '#5b9cf6',
       backgroundColor: 'transparent',
       borderWidth: 2,
-      borderDash: [6, 3],
       pointRadius: 0,
       pointHoverRadius: 4,
       fill: false,
       tension: 0,
       yAxisID: 'y2',
       order: 2,
+      spanGaps: true,
     });
   }
 
-  // Actual balance snapshot dots (scatter overlay)
   if (hasAnyDots) {
     datasets.push({
       label: 'Actual Balance',
@@ -3329,41 +3472,6 @@ function renderChart() {
       order: 0,
     });
   }
-
-  // No-salary fallback: cumulative spend
-  if (!hasSalary && !hasBalances) {
-    datasets.pop(); // remove the running balance we just added
-    const cumSpend = [];
-    let cs = 0;
-    spendData.forEach(v => { cs += v; cumSpend.push(cs); });
-    datasets.push({
-      label: 'Cumulative Spend',
-      data: cumSpend,
-      type: 'line',
-      borderColor: '#c8820a',
-      backgroundColor: 'rgba(200,130,10,0.05)',
-      borderWidth: 1.5,
-      pointRadius: 0,
-      pointHoverRadius: 4,
-      fill: true,
-      tension: 0.3,
-      yAxisID: 'y2',
-      order: 1,
-    });
-  }
-
-  const showLegend = hasSalary || hasBalances || savingsLine;
-
-  // Register a mobile-friendly tooltip positioner that pins to the top of
-  // the chart area so it never overlaps the bars/lines on small screens.
-  if (!Chart.Tooltip.positioners.mobileTop) {
-    Chart.Tooltip.positioners.mobileTop = function(elements) {
-      if (!elements.length) return false;
-      const ca = this.chart.chartArea;
-      return { x: (ca.left + ca.right) / 2, y: ca.top + 4 };
-    };
-  }
-  const isMobile = window.innerWidth <= 768;
 
   chartInstance = new Chart(ctx, {
     type: 'bar',
@@ -3391,7 +3499,7 @@ function renderChart() {
           titleColor: '#5a5a5a',
           bodyColor: '#1a1a1a',
           titleFont: { family: 'IBM Plex Mono', size: isMobile ? 9 : 10 },
-          bodyFont: { family: 'IBM Plex Mono', size: isMobile ? 10 : 11 },
+          bodyFont:  { family: 'IBM Plex Mono', size: isMobile ? 10 : 11 },
           padding: isMobile ? 8 : 12,
           callbacks: {
             label: ctx => {
@@ -3404,7 +3512,12 @@ function renderChart() {
       scales: {
         x: {
           grid: { color: 'rgba(0,0,0,0.04)', drawTicks: false },
-          ticks: { color: '#9a9490', font: { family: 'IBM Plex Mono', size: 9 }, maxTicksLimit: days > 60 ? 12 : days > 30 ? 8 : days, maxRotation: 0 },
+          ticks: {
+            color: ctx => ctx.tick?.label?.startsWith('▼') ? '#c8820a' : '#9a9490',
+            font:  ctx => ({ family: 'IBM Plex Mono', size: 9, weight: ctx.tick?.label?.startsWith('▼') ? '600' : '400' }),
+            maxTicksLimit: days > 60 ? 14 : days > 30 ? 10 : days + 4,
+            maxRotation: 0,
+          },
           border: { color: '#e2ddd7' }
         },
         y: {
@@ -3417,7 +3530,7 @@ function renderChart() {
           position: 'right',
           grid: { display: false },
           ticks: {
-            color: balance[balance.length-1] >= 0 ? '#1e8a4a' : '#c0392b',
+            color: lastNonNullBal >= 0 ? '#1e8a4a' : '#c0392b',
             font: { family: 'IBM Plex Mono', size: 9 },
             callback: v => (v < 0 ? '−' : '') + '£' + Math.abs(Math.round(v)).toLocaleString(),
             maxTicksLimit: 5,
@@ -3429,6 +3542,56 @@ function renderChart() {
   });
   renderPieChart();
   renderActualsDashChart();
+}
+
+// ─────────────────────────────────────────
+// CHART CSV EXPORT
+// ─────────────────────────────────────────
+function exportChartCSV() {
+  if (!lastChartData || !lastChartData.length) {
+    alert('No chart data available yet. Please wait for the dashboard to load.');
+    return;
+  }
+
+  // Build header row
+  const headers = [
+    'Date',
+    'Period',
+    'Daily Spend (£)',
+    'Salary Income (£)',
+    'Net Daily Flow (£)',
+    'Projected Balance (£)',
+    'Projected Savings (£)',
+    'Actual Balance Snapshot (£)',
+  ];
+
+  const rows = [headers];
+  lastChartData.forEach(r => {
+    rows.push([
+      r.date,
+      r.period,
+      r.dailySpend.toFixed(2),
+      r.salaryIncome.toFixed(2),
+      r.netFlow.toFixed(2),
+      r.projectedBalance !== null && r.projectedBalance !== undefined ? r.projectedBalance.toFixed(2) : '',
+      r.projectedSavings !== null && r.projectedSavings !== undefined ? r.projectedSavings.toFixed(2) : '',
+      r.actualBalance   !== null && r.actualBalance   !== undefined ? r.actualBalance.toFixed(2)   : '',
+    ]);
+  });
+
+  const csv = rows
+    .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `ledger-dashboard-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ─────────────────────────────────────────
