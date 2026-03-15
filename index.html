@@ -1482,15 +1482,20 @@
       <div class="chart-area" style="border-bottom:1px solid var(--border);">
         <div class="chart-header">
           <div>
-            <div class="chart-title">Daily Cash Flow — 60 days history + forecast</div>
-            <div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:3px;letter-spacing:0.06em;">Grey = past (projected) &nbsp;·&nbsp; ▼ = today &nbsp;·&nbsp; Amber dots = actual balance snapshots</div>
+            <div class="chart-title">Daily Cash Flow</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:3px;letter-spacing:0.06em;">Grey = past (projected) &nbsp;·&nbsp; ▼ = today &nbsp;·&nbsp; ● amber = actual current a/c &nbsp;·&nbsp; ■ blue = actual savings</div>
           </div>
           <div class="chart-controls">
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
-              <button onclick="exportChartCSV()" style="font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border2);color:var(--text-dim);padding:5px 12px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='var(--amber)';this.style.borderColor='var(--amber)'" onmouseout="this.style.color='var(--text-dim)';this.style.borderColor='var(--border2)'" title="Download chart data as CSV to share with Claude">⬇ Export CSV</button>
+              <button onclick="exportChartCSV()" style="font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border2);color:var(--text-dim);padding:5px 12px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='var(--amber)';this.style.borderColor='var(--amber)'" onmouseout="this.style.color='var(--text-dim)';this.style.borderColor='var(--border2)'" title="Download full financial export as CSV">⬇ Export CSV</button>
             </div>
             <div class="slider-container">
-              <span class="slider-label">Forecast window</span>
+              <span class="slider-label">History</span>
+              <input type="range" id="historySlider" min="7" max="180" value="60" step="1" oninput="renderChart()">
+              <span class="slider-value" id="historySliderVal">60 days</span>
+            </div>
+            <div class="slider-container">
+              <span class="slider-label">Forecast</span>
               <input type="range" id="forecastSlider" min="7" max="365" value="90" step="1">
               <span class="slider-value" id="sliderVal">90 days</span>
             </div>
@@ -3236,8 +3241,9 @@ function renderChart() {
   const days = parseInt(document.getElementById('forecastSlider').value);
   document.getElementById('sliderVal').textContent = days + (days === 1 ? ' day' : ' days');
 
-  // ── Build timelines: 60 days history (greyed) + forecast ──
-  const HIST_DAYS = 60;
+  // ── Build timelines: configurable history (greyed) + forecast ──
+  const HIST_DAYS = parseInt(document.getElementById('historySlider')?.value || 60);
+  document.getElementById('historySliderVal').textContent = HIST_DAYS + ' days';
 
   const histResult = buildHistoricalTotals(HIST_DAYS);
   const histLabels  = Object.keys(histResult.spend);
@@ -3332,15 +3338,24 @@ function renderChart() {
     }
   }
 
-  // Actual balance snapshot dots — show for all dates (past and future)
+  // Actual balance snapshot dots — split into current-account (amber) and savings (blue)
   const actualDots = allLabels.map(k => {
     const dStr = new Date(k).toISOString().slice(0,10);
     const ashSnap   = balanceSnapshots.find(s => s.person === 'ash'   && s.date === dStr);
     const henrySnap = balanceSnapshots.find(s => s.person === 'henry' && s.date === dStr);
-    if (ashSnap || henrySnap) return (ashSnap ? ashSnap.current : 0) + (henrySnap ? henrySnap.current : 0);
+    if (ashSnap || henrySnap) return (ashSnap ? (ashSnap.current || 0) : 0) + (henrySnap ? (henrySnap.current || 0) : 0);
     return null;
   });
-  const hasAnyDots = actualDots.some(v => v !== null);
+  const actualSavDots = allLabels.map(k => {
+    const dStr = new Date(k).toISOString().slice(0,10);
+    const ashSnap   = balanceSnapshots.find(s => s.person === 'ash'   && s.date === dStr);
+    const henrySnap = balanceSnapshots.find(s => s.person === 'henry' && s.date === dStr);
+    const sav = (ashSnap ? (ashSnap.savings || 0) : 0) + (henrySnap ? (henrySnap.savings || 0) : 0);
+    if ((ashSnap || henrySnap) && sav > 0) return sav;
+    return null;
+  });
+  const hasAnyDots    = actualDots.some(v => v !== null);
+  const hasAnySavDots = actualSavDots.some(v => v !== null);
 
   // Per-element bar colours: grey for past, original for forecast
   const spendBg  = allLabels.map((_, i) => i < todayIdx ? 'rgba(160,160,160,0.30)' : 'rgba(224,85,85,0.5)');
@@ -3364,7 +3379,8 @@ function renderChart() {
     netFlow:            allIncomeData[i] - allSpendData[i],
     projectedBalance:   allBalance[i],
     projectedSavings:   allSavings[i],
-    actualBalance:      actualDots[i],
+    actualCurrentBal:   actualDots[i],
+    actualSavingsBal:   actualSavDots[i],
   }));
 
   const lastNonNullBal = [...allBalance].reverse().find(v => v !== null) ?? 0;
@@ -3458,14 +3474,31 @@ function renderChart() {
 
   if (hasAnyDots) {
     datasets.push({
-      label: 'Actual Balance',
+      label: 'Actual Current A/C',
       data: actualDots,
       type: 'line',
       borderColor: 'transparent',
       backgroundColor: '#c8820a',
       pointRadius: actualDots.map(v => v !== null ? 6 : 0),
-      pointHoverRadius: actualDots.map(v => v !== null ? 8 : 0),
+      pointHoverRadius: actualDots.map(v => v !== null ? 9 : 0),
       pointStyle: 'circle',
+      fill: false,
+      showLine: false,
+      yAxisID: 'y2',
+      order: 0,
+    });
+  }
+
+  if (hasAnySavDots) {
+    datasets.push({
+      label: 'Actual Savings',
+      data: actualSavDots,
+      type: 'line',
+      borderColor: 'transparent',
+      backgroundColor: '#5b9cf6',
+      pointRadius: actualSavDots.map(v => v !== null ? 6 : 0),
+      pointHoverRadius: actualSavDots.map(v => v !== null ? 9 : 0),
+      pointStyle: 'rect',
       fill: false,
       showLine: false,
       yAxisID: 'y2',
@@ -3488,7 +3521,11 @@ function renderChart() {
             font: { family: 'IBM Plex Mono', size: 9 },
             boxWidth: 10, boxHeight: 10,
             padding: 14,
-            filter: item => item.text !== 'Actual Balance' || hasAnyDots,
+            filter: item => {
+              if (item.text === 'Actual Current A/C') return hasAnyDots;
+              if (item.text === 'Actual Savings')     return hasAnySavDots;
+              return true;
+            },
           }
         },
         tooltip: {
@@ -3553,41 +3590,183 @@ function exportChartCSV() {
     return;
   }
 
-  // Build header row
-  const headers = [
-    'Date',
-    'Period',
-    'Daily Spend (£)',
-    'Salary Income (£)',
-    'Net Daily Flow (£)',
-    'Projected Balance (£)',
-    'Projected Savings (£)',
-    'Actual Balance Snapshot (£)',
-  ];
+  // Helper: format a value as a quoted CSV cell
+  const q = v => `"${String(v === null || v === undefined ? '' : v).replace(/"/g, '""')}"`;
+  const fmtNum = v => (v !== null && v !== undefined) ? Number(v).toFixed(2) : '';
+  const today = new Date().toISOString().slice(0,10);
+  const EMPTY = ['','','','','','','','',''];
 
-  const rows = [headers];
+  const sections = [];
+
+  // ── SECTION 1: SUMMARY ──────────────────────────────────────────
+  const stats = calcStats();
+  const ashSal   = salaries.ash;
+  const henrySal = salaries.henry;
+  sections.push(['LEDGER — FULL FINANCIAL EXPORT', `Generated: ${today}`]);
+  sections.push(EMPTY);
+  sections.push(['=== HOUSEHOLD SUMMARY ===']);
+  sections.push(['', 'Monthly (£)', 'Annual (£)']);
+  sections.push(['Total Outgoings', fmtNum(stats.monthlyTotal), fmtNum(stats.monthlyTotal * 12)]);
+  sections.push(['  Ash share', fmtNum(stats.ashMonthly), fmtNum(stats.ashMonthly * 12)]);
+  sections.push(['  Henry share', fmtNum(stats.henryMonthly), fmtNum(stats.henryMonthly * 12)]);
+  sections.push(['  Joint', fmtNum(stats.jointMonthly), fmtNum(stats.jointMonthly * 12)]);
+  sections.push(['Active scheduled payments', stats.count]);
+  if (ashSal) {
+    sections.push(['Ash gross salary', fmtNum(ashSal.gross), fmtNum((ashSal.gross || 0) * 1)]);
+    sections.push(['Ash take-home', fmtNum(ashSal.monthlyTakeHome), fmtNum((ashSal.monthlyTakeHome || 0) * 12)]);
+  }
+  if (henrySal) {
+    sections.push(['Henry gross salary', fmtNum(henrySal.gross), fmtNum((henrySal.gross || 0) * 1)]);
+    sections.push(['Henry take-home', fmtNum(henrySal.monthlyTakeHome), fmtNum((henrySal.monthlyTakeHome || 0) * 12)]);
+  }
+  const totalTH = ((ashSal?.monthlyTakeHome || 0) + (henrySal?.monthlyTakeHome || 0));
+  if (totalTH > 0) {
+    sections.push(['Total household take-home', fmtNum(totalTH), fmtNum(totalTH * 12)]);
+    sections.push(['Net surplus after outgoings', fmtNum(totalTH - stats.monthlyTotal), fmtNum((totalTH - stats.monthlyTotal) * 12)]);
+    sections.push(['Outgoings as % of take-home', (stats.monthlyTotal / totalTH * 100).toFixed(1) + '%']);
+  }
+
+  // ── SECTION 2: MORTGAGE ──────────────────────────────────────────
+  if (mortgage && (mortgage.balance || mortgage.payment)) {
+    sections.push(EMPTY);
+    sections.push(['=== MORTGAGE ===']);
+    sections.push(['Outstanding Balance', fmtNum(mortgage.balance)]);
+    sections.push(['Annual Interest Rate', (mortgage.rate || 0) + '%']);
+    sections.push(['Monthly Payment', fmtNum(mortgage.payment)]);
+    sections.push(['Monthly Overpayment', fmtNum(mortgage.overpay || 0)]);
+    sections.push(['Payment Day of Month', mortgage.payday || '']);
+    const monthlyRate = (mortgage.rate || 0) / 100 / 12;
+    const totalMonthly = (mortgage.payment || 0) + (mortgage.overpay || 0);
+    if (mortgage.balance && monthlyRate > 0 && totalMonthly > monthlyRate * mortgage.balance) {
+      let bal = mortgage.balance, months = 0, totalInt = 0;
+      while (bal > 0 && months < 600) {
+        const int = bal * monthlyRate;
+        const cap = Math.min(totalMonthly - int, bal);
+        totalInt += int; bal = Math.max(0, bal - cap); months++;
+      }
+      const pd = new Date(); pd.setMonth(pd.getMonth() + months);
+      sections.push(['Projected Payoff Date', pd.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })]);
+      sections.push(['Projected Total Interest', fmtNum(totalInt)]);
+    }
+  }
+
+  // ── SECTION 3: ALL SCHEDULED PAYMENTS ────────────────────────────
+  sections.push(EMPTY);
+  sections.push(['=== SCHEDULED PAYMENTS ===']);
+  sections.push(['Name', 'Category', 'Owner', 'Amount (£)', 'Frequency', 'Day/Schedule', 'Monthly Cost (£)', 'Annual Cost (£)', 'Active']);
+
+  const activeEntries = entries.filter(e => !e._mortgagePayment && !e._mortgageOverpay);
+  // Group by category then sort by monthly cost desc
+  const catOrder = getCategoryOrder();
+  const sorted = [...activeEntries].sort((a, b) => {
+    const ci = catOrder.indexOf(a.category) - catOrder.indexOf(b.category);
+    if (ci !== 0) return ci;
+    const monthlyA = a.frequency === 'weekly' ? a.amount * 4.33 : a.frequency === 'monthly' ? a.amount : a.amount / 12;
+    const monthlyB = b.frequency === 'weekly' ? b.amount * 4.33 : b.frequency === 'monthly' ? b.amount : b.amount / 12;
+    return monthlyB - monthlyA;
+  });
+
+  const DAYS_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MON_NAMES  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  let prevCat = null;
+  let catMonthly = 0, catAnnual = 0;
+  sorted.forEach((e, idx) => {
+    if (e.category !== prevCat) {
+      if (prevCat !== null) sections.push(['  ' + prevCat + ' subtotal', '', '', '', '', '', fmtNum(catMonthly), fmtNum(catAnnual)]);
+      catMonthly = 0; catAnnual = 0; prevCat = e.category;
+    }
+    const monthly = e.frequency === 'weekly' ? e.amount * 4.33 : e.frequency === 'monthly' ? e.amount : e.amount / 12;
+    const annual  = monthly * 12;
+    catMonthly += e.active ? monthly : 0;
+    catAnnual  += e.active ? annual  : 0;
+    let sched = '';
+    if (e.frequency === 'weekly')  sched = 'Every ' + (DAYS_NAMES[e.dayOfWeek] || '');
+    if (e.frequency === 'monthly') sched = ordinal(e.dayOfMonth) + ' of month';
+    if (e.frequency === 'yearly')  sched = (MON_NAMES[(e.month||1)-1] || '') + ' ' + ordinal(e.dayOfMonth);
+    sections.push([
+      e.name,
+      catDisplayName(e.category),
+      e.owner || 'joint',
+      fmtNum(e.amount),
+      e.frequency,
+      sched,
+      e.active ? fmtNum(monthly) : '(inactive)',
+      e.active ? fmtNum(annual)  : '(inactive)',
+      e.active ? 'Yes' : 'No',
+    ]);
+  });
+  if (prevCat !== null) sections.push(['  ' + prevCat + ' subtotal', '', '', '', '', '', fmtNum(catMonthly), fmtNum(catAnnual)]);
+
+  // Mortgage as a payment row if set
+  if (mortgage && mortgage.payment) {
+    const mortMonthly = (mortgage.payment || 0) + (mortgage.overpay || 0);
+    sections.push(['Mortgage Payment', 'Bills', 'henry', fmtNum(mortgage.payment), 'monthly', ordinal(mortgage.payday || 1) + ' of month', fmtNum(mortMonthly), fmtNum(mortMonthly * 12), 'Yes']);
+  }
+
+  // ── SECTION 4: SPEND BY CATEGORY (monthly avg) ───────────────────
+  sections.push(EMPTY);
+  sections.push(['=== MONTHLY SPEND BY CATEGORY ===']);
+  sections.push(['Category', 'Monthly (£)', 'Annual (£)', '% of total outgoings']);
+  const allCats = getCategoryOrder();
+  allCats.forEach(cat => {
+    const catEntries = activeEntries.filter(e => e.active && e.category === cat);
+    if (!catEntries.length) return;
+    const m = catEntries.reduce((s, e) => {
+      if (e.frequency === 'weekly')  return s + e.amount * 4.33;
+      if (e.frequency === 'monthly') return s + e.amount;
+      if (e.frequency === 'yearly')  return s + e.amount / 12;
+      return s;
+    }, 0);
+    const pct = stats.monthlyTotal > 0 ? (m / stats.monthlyTotal * 100).toFixed(1) + '%' : '';
+    sections.push([catDisplayName(cat), fmtNum(m), fmtNum(m * 12), pct]);
+  });
+
+  // ── SECTION 5: LATEST BALANCE SNAPSHOT ───────────────────────────
+  if (balanceSnapshots.length > 0) {
+    sections.push(EMPTY);
+    sections.push(['=== LATEST BALANCE SNAPSHOTS ===']);
+    sections.push(['Person', 'Date', 'Current Account (£)', 'Savings (£)', 'Total (£)']);
+    ['ash','henry'].forEach(p => {
+      const snap = balanceSnapshots.filter(s => s.person === p).sort((a,b) => b.date.localeCompare(a.date))[0];
+      if (snap) sections.push([p.charAt(0).toUpperCase()+p.slice(1), snap.date, fmtNum(snap.current), fmtNum(snap.savings || 0), fmtNum((snap.current || 0) + (snap.savings || 0))]);
+    });
+    const latestAsh   = balanceSnapshots.filter(s => s.person === 'ash').sort((a,b)   => b.date.localeCompare(a.date))[0];
+    const latestHenry = balanceSnapshots.filter(s => s.person === 'henry').sort((a,b) => b.date.localeCompare(a.date))[0];
+    const totalCurrent = ((latestAsh?.current || 0) + (latestHenry?.current || 0));
+    const totalSavings = ((latestAsh?.savings || 0) + (latestHenry?.savings || 0));
+    sections.push(['TOTAL', '', fmtNum(totalCurrent), fmtNum(totalSavings), fmtNum(totalCurrent + totalSavings)]);
+  }
+
+  // ── SECTION 6: DAILY CASH FLOW (history + forecast) ──────────────
+  sections.push(EMPTY);
+  sections.push(['=== DAILY CASH FLOW (history + forecast) ===']);
+  sections.push(['NOTE: Past = projected figures based on schedule. Actual balance columns show real balance snapshots entered in the Balances tab.']);
+  sections.push(['Date', 'Period', 'Daily Spend (£)', 'Salary Income (£)', 'Net Daily Flow (£)', 'Projected Current A/C (£)', 'Projected Savings (£)', 'Actual Current A/C (£)', 'Actual Savings (£)']);
   lastChartData.forEach(r => {
-    rows.push([
+    sections.push([
       r.date,
       r.period,
-      r.dailySpend.toFixed(2),
-      r.salaryIncome.toFixed(2),
-      r.netFlow.toFixed(2),
-      r.projectedBalance !== null && r.projectedBalance !== undefined ? r.projectedBalance.toFixed(2) : '',
-      r.projectedSavings !== null && r.projectedSavings !== undefined ? r.projectedSavings.toFixed(2) : '',
-      r.actualBalance   !== null && r.actualBalance   !== undefined ? r.actualBalance.toFixed(2)   : '',
+      fmtNum(r.dailySpend),
+      fmtNum(r.salaryIncome),
+      fmtNum(r.netFlow),
+      fmtNum(r.projectedBalance),
+      fmtNum(r.projectedSavings),
+      r.actualCurrentBal !== null && r.actualCurrentBal !== undefined ? fmtNum(r.actualCurrentBal) : '',
+      r.actualSavingsBal !== null && r.actualSavingsBal !== undefined ? fmtNum(r.actualSavingsBal) : '',
     ]);
   });
 
-  const csv = rows
-    .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+  // ── Assemble CSV ──────────────────────────────────────────────────
+  const csv = sections
+    .map(row => row.map(v => q(v)).join(','))
     .join('\n');
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel compatibility
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `ledger-dashboard-${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `ledger-export-${today}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
