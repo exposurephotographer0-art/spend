@@ -317,8 +317,124 @@
     font-size: 11px;
     font-weight: 600;
     color: var(--red);
-    margin-bottom: 3px;
+    margin-bottom: 2px;
   }
+
+  /* Calendar list view */
+  .cal-list-view {
+    display: none;
+    flex-direction: column;
+    gap: 0;
+  }
+  .cal-list-view.active { display: flex; }
+  .calendar-grid.hidden { display: none; }
+
+  .cal-list-empty {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 32px 0;
+    text-align: center;
+  }
+
+  .cal-list-day {
+    border-bottom: 1px solid var(--border);
+    padding: 0;
+  }
+  .cal-list-day-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--surface2);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cal-list-day-header:hover { background: var(--surface3); }
+  .cal-list-date-num {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 300;
+    color: var(--text);
+    min-width: 28px;
+    text-align: center;
+  }
+  .cal-list-date-info {
+    flex: 1;
+  }
+  .cal-list-date-dow {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .cal-list-date-totals {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .cal-list-events {
+    padding: 4px 0 4px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .cal-list-event {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px 6px 0;
+    border-bottom: 1px solid var(--border);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cal-list-event:last-child { border-bottom: none; }
+  .cal-list-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .cal-list-event-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    flex: 1;
+  }
+  .cal-list-event-sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+  .cal-list-event-amount {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* View toggle button */
+  .cal-view-toggle {
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .cal-view-toggle:hover { color: var(--amber); border-color: var(--amber); }
+  .cal-view-toggle.list-active { color: var(--amber); border-color: var(--amber); background: var(--amber-glow); }
 
   .cal-day-chips {
     display: flex;
@@ -1269,17 +1385,23 @@
     .view.active { height: auto; }
 
     /* ── Stats row ── */
-    .stats-row { grid-template-columns: 1fr 1fr; }
-    .stat-card { padding: 14px 16px; }
+    .stats-row { grid-template-columns: 1fr 1fr; overflow-x: auto; }
+    .stat-card { padding: 14px 14px; min-width: 120px; }
     .stat-value { font-size: 20px; }
     .stat-label { font-size: 8px; }
+    .stat-sub { font-size: 9px; }
 
     /* ── Charts ── */
     .chart-area { padding: 14px 14px 12px; }
-    .chart-header { flex-direction: column; gap: 10px; align-items: flex-start !important; }
-    .chart-wrap { height: 180px !important; }
-    .slider-container { flex-wrap: wrap; gap: 6px; }
-    input[type=range] { width: 150px; }
+    .chart-header { flex-direction: column; gap: 8px; align-items: stretch !important; }
+    .chart-wrap { height: 260px !important; }
+    .chart-controls { align-items: stretch !important; }
+    .slider-container { flex-wrap: nowrap; gap: 8px; width: 100%; }
+    .slider-label { white-space: nowrap; min-width: 44px; }
+    .slider-value { min-width: 48px; }
+    input[type=range] { flex: 1; min-width: 80px; width: auto; }
+    /* Export button full-width on mobile */
+    .chart-export-btn { width: 100%; text-align: center; justify-content: center; }
 
     /* ── Dashboard lower ── */
     .dash-lower-row { grid-template-columns: 1fr !important; }
@@ -1296,15 +1418,17 @@
     .schedule-table .col-annual { display: none; }
 
     /* ── Calendar ── */
-    .calendar-area { padding: 12px 10px; }
+    .calendar-area { padding: 12px 8px; }
     .calendar-grid { gap: 1px; }
-    .cal-day { min-height: 58px; padding: 5px 4px; }
+    .cal-day { min-height: 72px; padding: 5px 4px; }
     .cal-day-num { font-size: 10px; }
     .cal-chip { font-size: 8px; padding: 1px 3px; }
     .cal-day-total { font-size: 10px; }
     .cal-day-header { font-size: 8px; padding: 5px 0; }
-    .cal-month-title { font-size: 12px; }
+    .cal-month-title { font-size: 12px; min-width: 120px; }
     .cal-nav-btn { width: 36px; height: 36px; font-size: 16px; }
+    .cal-header-right { flex-direction: column; align-items: flex-end; gap: 4px; }
+    #calMonthTotal { font-size: 10px; text-align: right; }
 
     /* ── Salary ── */
     .salary-grid { grid-template-columns: 1fr !important; padding: 14px !important; gap: 14px !important; }
@@ -1420,9 +1544,9 @@
     .savings-summary-bar { grid-template-columns: 1fr 1fr !important; }
     .actuals-input-row { grid-template-columns: 1fr !important; }
     .variance-row { grid-template-columns: 1fr !important; }
-    .calendar-area { padding: 10px 6px; }
-    .cal-day { min-height: 52px; padding: 4px 3px; }
-    .chart-wrap { height: 160px !important; }
+    .calendar-area { padding: 10px 4px; }
+    .cal-day { min-height: 64px; padding: 4px 3px; }
+    .chart-wrap { height: 220px !important; }
     .salary-input-row { grid-template-columns: 1fr !important; }
   }
 </style>
@@ -1483,11 +1607,12 @@
         <div class="chart-header">
           <div>
             <div class="chart-title">Daily Cash Flow</div>
-            <div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:3px;letter-spacing:0.06em;">Grey = past (projected) &nbsp;·&nbsp; ▼ = today &nbsp;·&nbsp; ● amber = actual current a/c &nbsp;·&nbsp; ■ blue = actual savings</div>
+            <div class="chart-hint" style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-top:3px;letter-spacing:0.06em;">Grey = past &nbsp;·&nbsp; ▼ = today &nbsp;·&nbsp; ● = current a/c &nbsp;·&nbsp; ■ = savings</div>
           </div>
           <div class="chart-controls">
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
-              <button onclick="exportChartCSV()" style="font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border2);color:var(--text-dim);padding:5px 12px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='var(--amber)';this.style.borderColor='var(--amber)'" onmouseout="this.style.color='var(--text-dim)';this.style.borderColor='var(--border2)'" title="Download full financial export as CSV">⬇ Export CSV</button>
+              <button onclick="exportChartCSV()" class="chart-export-btn" style="font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border2);color:var(--text-dim);padding:5px 12px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.color='var(--amber)';this.style.borderColor='var(--amber)'" onmouseout="this.style.color='var(--text-dim)';this.style.borderColor='var(--border2)'" title="Download full financial export as CSV">⬇ Export CSV</button>
+              <button onclick="toggleChartBars()" id="chartBarsToggle" style="display:none;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;background:var(--surface);border:1px solid var(--border2);color:var(--text-dim);padding:5px 12px;cursor:pointer;transition:all 0.15s;" title="Show/hide daily bars">⊟ Bars</button>
             </div>
             <div class="slider-container">
               <span class="slider-label">History</span>
@@ -1553,9 +1678,13 @@
             <div class="cal-month-title" id="calMonthTitle"></div>
             <button class="cal-nav-btn" onclick="changeMonth(1)">&#8594;</button>
           </div>
-          <div style="font-family:var(--mono);font-size:11px;color:var(--text-muted);" id="calMonthTotal"></div>
+          <div class="cal-header-right" style="display:flex;align-items:center;gap:10px;">
+            <button class="cal-view-toggle" id="calViewToggle" onclick="toggleCalView()">☰ List</button>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--text-muted);" id="calMonthTotal"></div>
+          </div>
         </div>
         <div class="calendar-grid" id="calendarGrid"></div>
+        <div class="cal-list-view" id="calListView"></div>
       </div>
     </div>
 
@@ -3110,15 +3239,78 @@ function getDailyTotalsForMonth(year, month) {
   const start = new Date(year, month, 1);
   const end = new Date(year, month + 1, 0);
   const totals = {};
+  const today = new Date(); today.setHours(0,0,0,0);
+  const monthIdx = (year - today.getFullYear()) * 12 + (month - today.getMonth());
 
-  // Exclude _mortgageOverpay — handled separately via overpayMonths (consistent with buildDailyTotals)
+  // Scheduled expense entries (bills, subscriptions, etc.)
   entries.filter(e => e.active && !e._mortgageOverpay).forEach(entry => {
     getOccurrencesInRange(entry, start, end).forEach(date => {
       const k = date.getDate();
       if (!totals[k]) totals[k] = [];
-      totals[k].push(entry);
+      totals[k].push({ ...entry, type: 'expense' });
     });
   });
+
+  // Salary income — one event per person on their payday
+  ['ash', 'henry'].forEach(person => {
+    const s = salaries[person];
+    if (!s || !s.monthlyTakeHome) return;
+    const d = getActualPayday(year, month, s);
+    if (d.getMonth() !== month) return;
+    const k = d.getDate();
+    if (!totals[k]) totals[k] = [];
+    totals[k].push({
+      name: (person === 'ash' ? 'Ash' : 'Henry') + ' Salary',
+      color: person === 'ash' ? '#5b9cf6' : '#b06af5',
+      amount: s.monthlyTakeHome,
+      type: 'income',
+      owner: person,
+      category: 'Salary'
+    });
+  });
+
+  // Mortgage payment and overpayment
+  if (mortgage && mortgage.payment && mortgage.payday) {
+    const mortPayLinked = entries.some(e => e._mortgagePayment && e.active);
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const payday = Math.min(mortgage.payday, lastDay);
+    const d = new Date(year, month, payday);
+    if (d.getMonth() === month) {
+      const k = d.getDate();
+      if (!mortPayLinked) {
+        if (!totals[k]) totals[k] = [];
+        totals[k].push({ name: 'Mortgage', color: '#9c6b3a', amount: mortgage.payment, type: 'expense', category: 'Mortgage', owner: 'henry' });
+      }
+      const overpayMonths = mortgage.overpayMonths || {};
+      const ovpChecked = overpayMonths[monthIdx] !== false;
+      if (mortgage.overpay > 0 && ovpChecked) {
+        if (!totals[k]) totals[k] = [];
+        totals[k].push({ name: 'Mort. Overpay', color: '#7a5a2f', amount: mortgage.overpay, type: 'expense', category: 'Mortgage', owner: 'henry' });
+      }
+    }
+  }
+
+  // Savings transfers — debit from current account on payday
+  ['ash', 'henry'].forEach(person => {
+    const sal = salaries[person];
+    const paydayNum  = sal ? (sal.payday || 25) : 25;
+    const paydayType = sal ? (sal.paydayType || 'date') : 'date';
+    const d = getActualPayday(year, month, { payday: paydayNum, paydayType });
+    if (d.getMonth() !== month) return;
+    const amt = getSavingAmountForMonth(person, monthIdx);
+    if (amt <= 0) return;
+    const k = d.getDate();
+    if (!totals[k]) totals[k] = [];
+    totals[k].push({
+      name: (person === 'ash' ? 'Ash' : 'Henry') + ' Savings',
+      color: '#1e8a4a',
+      amount: amt,
+      type: 'savings',
+      owner: person,
+      category: 'Savings'
+    });
+  });
+
   return totals;
 }
 
@@ -3602,7 +3794,7 @@ function renderChart() {
           ticks: {
             color: ctx => ctx.tick?.label?.startsWith('▼') ? '#c8820a' : '#9a9490',
             font:  ctx => ({ family: 'IBM Plex Mono', size: 9, weight: ctx.tick?.label?.startsWith('▼') ? '600' : '400' }),
-            maxTicksLimit: days > 60 ? 14 : days > 30 ? 10 : days + 4,
+            maxTicksLimit: isMobile ? (days > 60 ? 7 : days > 30 ? 6 : 5) : (days > 60 ? 14 : days > 30 ? 10 : days + 4),
             maxRotation: 0,
           },
           border: { color: '#e2ddd7' }
@@ -3627,8 +3819,34 @@ function renderChart() {
       }
     }
   });
+  // Show "Bars" toggle button on mobile
+  const barsToggleBtn = document.getElementById('chartBarsToggle');
+  if (barsToggleBtn) {
+    barsToggleBtn.style.display = isMobile ? '' : 'none';
+  }
+
   renderPieChart();
   renderActualsDashChart();
+}
+
+// Toggle chart bars on/off (useful on mobile for a cleaner line-only view)
+let chartBarsVisible = true;
+function toggleChartBars() {
+  chartBarsVisible = !chartBarsVisible;
+  const btn = document.getElementById('chartBarsToggle');
+  if (btn) {
+    btn.textContent = chartBarsVisible ? '⊟ Bars' : '⊞ Bars';
+    btn.style.color = chartBarsVisible ? 'var(--text-dim)' : 'var(--amber)';
+    btn.style.borderColor = chartBarsVisible ? 'var(--border2)' : 'var(--amber)';
+  }
+  if (chartInstance) {
+    chartInstance.data.datasets.forEach(ds => {
+      if (ds.type !== 'line' && !ds.showLine) {
+        ds.hidden = !chartBarsVisible;
+      }
+    });
+    chartInstance.update();
+  }
 }
 
 // ─────────────────────────────────────────
@@ -4574,10 +4792,16 @@ function renderCalendar() {
   
   const dayTotals = getDailyTotalsForMonth(year, month);
   
-  // Month total
-  let monthTotal = 0;
-  Object.values(dayTotals).forEach(arr => arr.forEach(e => monthTotal += e.amount));
-  document.getElementById('calMonthTotal').textContent = `Month total: £${monthTotal.toFixed(2)}`;
+  // Month totals — split income vs outgoings
+  let monthExpTotal = 0, monthIncTotal = 0;
+  Object.values(dayTotals).forEach(arr => arr.forEach(e => {
+    if (e.type === 'income') monthIncTotal += e.amount;
+    else monthExpTotal += e.amount;
+  }));
+  const monthTotalText = monthIncTotal > 0
+    ? `Out: −£${monthExpTotal.toFixed(2)} · In: +£${monthIncTotal.toFixed(2)}`
+    : `Month total: £${monthExpTotal.toFixed(2)}`;
+  document.getElementById('calMonthTotal').textContent = monthTotalText;
   
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
@@ -4597,17 +4821,26 @@ function renderCalendar() {
   for (let day = 1; day <= lastDay.getDate(); day++) {
     const isToday = (new Date(year, month, day)).toDateString() === today.toDateString();
     const dayEntries = dayTotals[day] || [];
-    const total = dayEntries.reduce((s, e) => s + e.amount, 0);
-    
-    const chips = dayEntries.slice(0,3).map(e =>
-      `<div class="cal-chip" style="background:${e.color};" title="${e.name}: £${e.amount.toFixed(2)}">${e.name.slice(0,14)}</div>`
-    ).join('');
-    
-    const overflow = dayEntries.length > 3 ? `<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);">+${dayEntries.length-3} more</div>` : '';
-    
+    const incEntries = dayEntries.filter(e => e.type === 'income');
+    const outEntries = dayEntries.filter(e => e.type !== 'income');
+    const expTotal   = outEntries.reduce((s, e) => s + e.amount, 0);
+    const incTotal   = incEntries.reduce((s, e) => s + e.amount, 0);
+
+    // Show income chips first, then expenses; limit to 3 total
+    const orderedEntries = [...incEntries, ...outEntries];
+    const chips = orderedEntries.slice(0, 3).map(e => {
+      const isInc = e.type === 'income';
+      const isSav = e.type === 'savings';
+      const prefix = isInc ? '+' : isSav ? '⇒' : '';
+      const textColor = isInc ? '#fff' : '#000';
+      return `<div class="cal-chip" style="background:${e.color};color:${textColor};" title="${e.name}: £${e.amount.toFixed(2)}">${prefix}${e.name.slice(0,13)}</div>`;
+    }).join('');
+    const overflow = orderedEntries.length > 3 ? `<div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);">+${orderedEntries.length-3} more</div>` : '';
+
     html += `<div class="cal-day${isToday ? ' today' : ''}" onclick="openCalDayModal(${year},${month},${day})" style="cursor:pointer;">
       <div class="cal-day-num">${day}</div>
-      ${total > 0 ? `<div class="cal-day-total">£${total.toFixed(2)}</div>` : ''}
+      ${expTotal > 0 ? `<div class="cal-day-total">−£${expTotal.toFixed(2)}</div>` : ''}
+      ${incTotal > 0 ? `<div style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--green);margin-bottom:2px;">+£${incTotal.toFixed(2)}</div>` : ''}
       <div class="cal-day-chips">${chips}${overflow}</div>
     </div>`;
   }
@@ -4618,13 +4851,96 @@ function renderCalendar() {
   for (let i = 1; i <= remainder; i++) {
     html += `<div class="cal-day other-month"><div class="cal-day-num">${i}</div></div>`;
   }
-  
-  document.getElementById('calendarGrid').innerHTML = html;
+
+  const gridEl = document.getElementById('calendarGrid');
+  const listEl = document.getElementById('calListView');
+  if (calViewMode === 'list') {
+    gridEl.classList.add('hidden');
+    listEl.classList.add('active');
+    renderCalendarList();
+  } else {
+    gridEl.classList.remove('hidden');
+    listEl.classList.remove('active');
+    gridEl.innerHTML = html;
+  }
 }
 
 function changeMonth(dir) {
   calendarDate.setMonth(calendarDate.getMonth() + dir);
   renderCalendar();
+}
+
+let calViewMode = 'grid'; // 'grid' | 'list'
+
+function toggleCalView() {
+  calViewMode = calViewMode === 'grid' ? 'list' : 'grid';
+  const btn = document.getElementById('calViewToggle');
+  if (btn) {
+    btn.textContent = calViewMode === 'list' ? '⊞ Grid' : '☰ List';
+    btn.classList.toggle('list-active', calViewMode === 'list');
+  }
+  renderCalendar();
+}
+
+function renderCalendarList() {
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth();
+  const dayTotals = getDailyTotalsForMonth(year, month);
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  let html = '';
+  let hasAny = false;
+
+  for (let day = 1; day <= lastDay; day++) {
+    const dayEntries = dayTotals[day] || [];
+    if (!dayEntries.length) continue;
+    hasAny = true;
+
+    const isToday = (new Date(year, month, day)).toDateString() === today.toDateString();
+    const dow = DAYS_OF_WEEK[(new Date(year, month, day).getDay() + 6) % 7];
+    const incEntries = dayEntries.filter(e => e.type === 'income');
+    const outEntries = dayEntries.filter(e => e.type !== 'income');
+    const expTotal   = outEntries.reduce((s, e) => s + e.amount, 0);
+    const incTotal   = incEntries.reduce((s, e) => s + e.amount, 0);
+
+    const totalsHtml = [
+      incTotal > 0 ? `<span style="color:var(--green);">+£${incTotal.toFixed(2)}</span>` : null,
+      expTotal > 0 ? `<span style="color:var(--red);">−£${expTotal.toFixed(2)}</span>` : null,
+    ].filter(Boolean).join(' ');
+
+    html += `<div class="cal-list-day${isToday ? ' today' : ''}" style="${isToday ? 'border-left:3px solid var(--amber);' : ''}">
+      <div class="cal-list-day-header" onclick="openCalDayModal(${year},${month},${day})">
+        <div class="cal-list-date-num" style="${isToday ? 'color:var(--amber);font-weight:600;' : ''}">${day}</div>
+        <div class="cal-list-date-info">
+          <div class="cal-list-date-dow">${dow}${isToday ? ' — Today' : ''}</div>
+          <div class="cal-list-date-totals">${totalsHtml}</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--text-muted);padding-right:4px;">›</div>
+      </div>
+      <div class="cal-list-events">
+        ${[...incEntries, ...outEntries].map(e => {
+          const isInc = e.type === 'income';
+          const amtColor = isInc ? 'var(--green)' : (e.type === 'savings' ? 'var(--green)' : 'var(--red)');
+          const amtPrefix = isInc ? '+' : '−';
+          return `<div class="cal-list-event">
+            <span class="cal-list-dot" style="background:${e.color};"></span>
+            <div style="flex:1;min-width:0;">
+              <div class="cal-list-event-name">${e.name}</div>
+              <div class="cal-list-event-sub">${catDisplayName(e.category || '')}${e.owner ? ' · ' + e.owner : ''}</div>
+            </div>
+            <span class="cal-list-event-amount" style="color:${amtColor};">${amtPrefix}£${e.amount.toFixed(2)}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  if (!hasAny) {
+    html = `<div class="cal-list-empty">No events this month.</div>`;
+  }
+
+  document.getElementById('calListView').innerHTML = html;
 }
 
 // ─────────────────────────────────────────
@@ -4668,19 +4984,31 @@ function openCalDayModal(year, month, day) {
     document.getElementById('calDayModalBody').innerHTML =
       `<div style="font-family:var(--mono);font-size:12px;color:var(--text-muted);padding:12px 0;">No payments on this day.</div>`;
   } else {
+    const incTotal  = dayEntries.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
+    const outTotal  = dayEntries.filter(e => e.type !== 'income').reduce((s, e) => s + e.amount, 0);
     const total = dayEntries.reduce((s, e) => s + e.amount, 0);
     document.getElementById('calDayModalBody').innerHTML =
-      dayEntries.map(e => `
+      dayEntries.map(e => {
+        const isInc = e.type === 'income';
+        const isSav = e.type === 'savings';
+        const amtColor = isInc ? 'var(--green)' : 'var(--text)';
+        const amtPrefix = isInc ? '+' : '−';
+        const schedStr = getScheduleStr(entries.find(x=>x.name===e.name&&x.active)||{frequency:''});
+        const subtitleParts = [catDisplayName(e.category || ''), e.owner || 'joint', schedStr].filter(x => x && x.trim());
+        return `
         <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
           <span style="width:11px;height:11px;border-radius:50%;background:${e.color};flex-shrink:0;display:inline-block;"></span>
           <div style="flex:1;font-family:var(--mono);font-size:12px;min-width:0;">
-            <div style="color:var(--text-primary);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.name}</div>
-            <div style="color:var(--text-muted);font-size:10px;">${catDisplayName(e.category)} · ${e.owner || 'joint'} · ${getScheduleStr(entries.find(x=>x.name===e.name&&x.active)||{frequency:''})}</div>
+            <div style="color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.name}</div>
+            <div style="color:var(--text-muted);font-size:10px;">${subtitleParts.join(' · ')}</div>
           </div>
-          <span style="font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;">£${e.amount.toFixed(2)}</span>
-        </div>`).join('') +
-      `<div style="display:flex;justify-content:space-between;padding:10px 0 2px;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text-primary);">
-        <span>Total</span><span>£${total.toFixed(2)}</span>
+          <span style="font-family:var(--mono);font-size:13px;font-weight:600;color:${amtColor};white-space:nowrap;">${amtPrefix}£${e.amount.toFixed(2)}</span>
+        </div>`;
+      }).join('') +
+      `<div style="padding:10px 0 2px;font-family:var(--mono);font-size:12px;border-top:1px solid var(--border2);">
+        ${outTotal > 0 ? `<div style="display:flex;justify-content:space-between;font-weight:700;padding:2px 0;"><span>Outgoings</span><span style="color:var(--red);">−£${outTotal.toFixed(2)}</span></div>` : ''}
+        ${incTotal > 0 ? `<div style="display:flex;justify-content:space-between;font-weight:700;padding:2px 0;"><span>Income</span><span style="color:var(--green);">+£${incTotal.toFixed(2)}</span></div>` : ''}
+        ${incTotal > 0 && outTotal > 0 ? `<div style="display:flex;justify-content:space-between;color:var(--text-muted);padding:2px 0;font-size:11px;"><span>Net</span><span style="color:${incTotal-outTotal>=0?'var(--green)':'var(--red)'};">${incTotal-outTotal>=0?'+':'−'}£${Math.abs(incTotal-outTotal).toFixed(2)}</span></div>` : ''}
       </div>`;
   }
 
