@@ -1535,6 +1535,381 @@
     .person-tabs { flex-wrap: wrap; }
   }
 
+  /* ════════════════════════════════════════════
+     INSIGHTS VIEW
+  ════════════════════════════════════════════ */
+  .insights-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    max-width: 1100px;
+    padding: 0;
+  }
+  .insights-loading {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 48px;
+  }
+  .ins-card {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 22px 24px;
+  }
+  .ins-card.full { grid-column: 1 / -1; }
+  .ins-card-title {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ins-card-title-icon {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
+  /* Health Score */
+  .ins-score-wrap {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .ins-score-ring {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+  }
+  .ins-score-ring svg { width: 80px; height: 80px; }
+  .ins-score-num {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--text);
+  }
+  .ins-score-lines { flex: 1; }
+  .ins-score-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .ins-score-line:last-child { border-bottom: none; }
+  .ins-score-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border2);
+    flex: 1;
+    overflow: hidden;
+  }
+  .ins-score-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s ease;
+  }
+  .ins-score-label { flex: 1; color: var(--text-dim); }
+  .ins-score-pts { min-width: 32px; text-align: right; color: var(--text-muted); }
+
+  /* Alerts */
+  .ins-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border-radius: 2px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .ins-alert:last-child { margin-bottom: 0; }
+  .ins-alert.red    { background: rgba(192,57,43,0.08); border: 1px solid rgba(192,57,43,0.2); color: var(--red); }
+  .ins-alert.amber  { background: rgba(200,130,10,0.08); border: 1px solid rgba(200,130,10,0.2); color: var(--amber); }
+  .ins-alert.green  { background: rgba(30,138,74,0.08); border: 1px solid rgba(30,138,74,0.2); color: var(--green); }
+  .ins-alert.blue   { background: rgba(91,156,246,0.08); border: 1px solid rgba(91,156,246,0.2); color: #5b9cf6; }
+  .ins-alert-icon { font-size: 14px; flex-shrink: 0; line-height: 1.3; }
+  .ins-alert-text { flex: 1; line-height: 1.5; }
+  .ins-no-alerts { font-family: var(--mono); font-size: 11px; color: var(--text-muted); font-style: italic; }
+
+  /* Stat grid */
+  .ins-stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .ins-stat {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+  }
+  .ins-stat-label {
+    font-family: var(--mono);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .ins-stat-val {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 300;
+    color: var(--text);
+  }
+  .ins-stat-sub {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+
+  /* Mortgage */
+  .ins-mort-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .ins-mort-cell {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+  }
+  .ins-mort-label {
+    font-family: var(--mono);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .ins-mort-val {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--text);
+  }
+  .ins-mort-saving {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(30,138,74,0.06);
+    border: 1px solid rgba(30,138,74,0.18);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    line-height: 1.6;
+  }
+  .ins-what-if {
+    margin-top: 10px;
+    padding: 12px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+  .ins-what-if-title {
+    font-family: var(--mono);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .ins-what-if-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .ins-what-if-row:last-child { border-bottom: none; }
+  .ins-what-if-label { color: var(--amber); min-width: 80px; }
+  .ins-what-if-result { color: var(--text-dim); flex: 1; }
+  .ins-what-if-saving { color: var(--green); min-width: 70px; text-align: right; }
+
+  /* Savings projection */
+  .ins-sav-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .ins-sav-cell {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+    text-align: center;
+  }
+  .ins-sav-horizon {
+    font-family: var(--mono);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .ins-sav-amount {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 300;
+    color: #5b9cf6;
+  }
+  .ins-sav-sub {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+
+  /* Category breakdown */
+  .ins-cat-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .ins-cat-row:last-child { border-bottom: none; }
+  .ins-cat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .ins-cat-name { flex: 1; color: var(--text-dim); }
+  .ins-cat-bar-wrap {
+    width: 80px;
+    height: 4px;
+    background: var(--border2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .ins-cat-bar { height: 100%; border-radius: 2px; }
+  .ins-cat-pct { min-width: 32px; text-align: right; color: var(--text-muted); font-size: 10px; }
+  .ins-cat-amt { min-width: 56px; text-align: right; color: var(--text); font-weight: 600; }
+
+  /* Tips */
+  .ins-tip {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .ins-tip:last-child { border-bottom: none; }
+  .ins-tip-num {
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--amber);
+    min-width: 20px;
+    line-height: 1.4;
+  }
+  .ins-tip-text { flex: 1; color: var(--text-dim); line-height: 1.6; }
+  .ins-tip-impact {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 1px;
+    align-self: flex-start;
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+  .ins-tip-impact.high   { background: rgba(192,57,43,0.12); color: var(--red); }
+  .ins-tip-impact.medium { background: rgba(200,130,10,0.12); color: var(--amber); }
+  .ins-tip-impact.low    { background: rgba(30,138,74,0.12); color: var(--green); }
+
+  /* AI Analysis */
+  .ins-ai-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .ins-ai-url-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .ins-ai-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .ins-ai-input:focus { border-color: var(--amber); }
+  .ins-ai-btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border: 1px solid var(--amber);
+    background: none;
+    color: var(--amber);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .ins-ai-btn:hover { background: var(--amber); color: #000; }
+  .ins-ai-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ins-ai-result {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+    padding: 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    white-space: pre-wrap;
+    display: none;
+  }
+  .ins-ai-result.visible { display: block; }
+  .ins-ai-note {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  @media (max-width: 768px) {
+    .insights-grid { grid-template-columns: 1fr; }
+    .ins-card.full { grid-column: 1; }
+    .ins-stat-row { grid-template-columns: 1fr 1fr; }
+    .ins-mort-row { grid-template-columns: 1fr; }
+    .ins-sav-row  { grid-template-columns: 1fr 1fr 1fr; }
+    .ins-what-if-row { flex-wrap: wrap; }
+    .ins-ai-url-row { flex-direction: column; align-items: stretch; }
+  }
+
   /* ── SMALL PHONE (≤ 480px) ──────────────────────────── */
   @media (max-width: 480px) {
     .stats-row { grid-template-columns: 1fr 1fr; }
@@ -1593,6 +1968,7 @@
     <button class="nav-btn" onclick="switchView('balances')">Balances</button>
     <button class="nav-btn" onclick="switchView('savings')">Savings</button>
     <button class="nav-btn" onclick="switchView('actuals')">Actuals</button>
+    <button class="nav-btn" onclick="switchView('insights')">✦ Insights</button>
   </div>
 </header>
 
@@ -2118,6 +2494,15 @@
             <div style="font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">Saved Months</div>
             <div id="actuals-saved-list"></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INSIGHTS VIEW -->
+    <div class="view" id="view-insights">
+      <div style="flex:1;overflow-y:auto;">
+        <div class="insights-grid" id="insightsGrid">
+          <div class="insights-loading">Loading insights…</div>
         </div>
       </div>
     </div>
@@ -5190,6 +5575,534 @@ function saveEntry() {
 }
 
 // ─────────────────────────────────────────
+// INSIGHTS ENGINE
+// ─────────────────────────────────────────
+
+function calcMortgagePayoff(balance, annualRate, payment, extraOverpay) {
+  if (!balance || !annualRate || !payment) return null;
+  const monthlyRate = annualRate / 100 / 12;
+  let bal = balance;
+  let months = 0, totalInterest = 0;
+  const ovp = extraOverpay || 0;
+  const maxMonths = 720;
+  while (bal > 0.005 && months < maxMonths) {
+    const interest = bal * monthlyRate;
+    const principal = payment + ovp - interest;
+    if (principal <= 0) return null; // payment doesn't cover interest
+    totalInterest += interest;
+    bal = Math.max(0, bal - principal);
+    months++;
+  }
+  return { months, totalInterest };
+}
+
+function insMonthsToStr(months) {
+  if (!months || months <= 0) return '—';
+  const y = Math.floor(months / 12);
+  const m = months % 12;
+  const parts = [];
+  if (y) parts.push(y + (y === 1 ? ' yr' : ' yrs'));
+  if (m) parts.push(m + (m === 1 ? ' mo' : ' mos'));
+  return parts.join(' ');
+}
+
+function insFindLowBalance(thresholdStr) {
+  const threshold = parseFloat(thresholdStr) || 500;
+  const latestAsh   = balanceSnapshots.filter(x => x.person === 'ash').sort((a,b)=>b.date.localeCompare(a.date))[0];
+  const latestHenry = balanceSnapshots.filter(x => x.person === 'henry').sort((a,b)=>b.date.localeCompare(a.date))[0];
+  if (!latestAsh && !latestHenry) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const anchorDateStr = [latestAsh?.date, latestHenry?.date].filter(Boolean).sort().reverse()[0];
+  const anchorDate = new Date(anchorDateStr); anchorDate.setHours(0,0,0,0);
+  let bal = (latestAsh ? latestAsh.current || 0 : 0) + (latestHenry ? latestHenry.current || 0 : 0);
+  if (anchorDate < today) {
+    const bridge = calcProjectedSpendBetween(anchorDateStr, today.toISOString().slice(0,10));
+    const bridgeInc = calcProjectedIncomeBetween(anchorDateStr, today.toISOString().slice(0,10));
+    bal = bal + bridgeInc - bridge;
+  }
+  const { spend, income } = buildDailyTotals(180);
+  const savFlow = getSavingsBetween(null, 180, Object.keys(spend));
+  for (const k of Object.keys(spend)) {
+    const sav = (savFlow[k] || {}).current || 0;
+    bal = bal + (income[k] || 0) - spend[k] + sav;
+    if (bal < threshold) {
+      return { date: new Date(k), balance: bal };
+    }
+  }
+  return null;
+}
+
+function insGetCategoryBreakdown() {
+  const stats = calcStats();
+  const active = entries.filter(e => e.active && !e._mortgageOverpay);
+  const monthly = e => {
+    if (e.frequency === 'weekly')      return e.amount * 4.33;
+    if (e.frequency === 'fortnightly') return e.amount * 26 / 12;
+    if (e.frequency === 'monthly')     return e.amount;
+    if (e.frequency === 'quarterly')   return e.amount / 3;
+    if (e.frequency === 'biannually')  return e.amount / 6;
+    if (e.frequency === 'yearly')      return e.amount / 12;
+    return 0;
+  };
+  const bycat = {};
+  active.forEach(e => {
+    const cat = e.category || 'Uncategorised';
+    bycat[cat] = (bycat[cat] || 0) + monthly(e);
+  });
+  // Add mortgage separately if not linked
+  const mortPayLinked = entries.some(x => x._mortgagePayment && x.active);
+  if (mortgage && mortgage.payment && !mortPayLinked) {
+    bycat['Mortgage'] = (bycat['Mortgage'] || 0) + (mortgage.payment || 0);
+  }
+  if (mortgage && mortgage.overpay > 0) {
+    bycat['Mortgage'] = (bycat['Mortgage'] || 0) + (mortgage.overpay || 0);
+  }
+  const total = Object.values(bycat).reduce((s,v) => s+v, 0) || 1;
+  return Object.entries(bycat)
+    .map(([cat, amt]) => ({ cat, amt, pct: amt / total * 100 }))
+    .sort((a,b) => b.amt - a.amt);
+}
+
+function insGetHealthScore() {
+  const stats = calcStats();
+  const ashTH    = salaries.ash   ? salaries.ash.monthlyTakeHome   : 0;
+  const henryTH  = salaries.henry ? salaries.henry.monthlyTakeHome : 0;
+  const totalIncome = ashTH + henryTH;
+  const ashSav    = getDefaultSavingAmount('ash');
+  const henrySav  = getDefaultSavingAmount('henry');
+  const totalSav  = ashSav + henrySav;
+
+  const components = [];
+
+  // 1. Outgoings ratio (0-35 pts) — <50% = 35, 50-70% = 20, 70-85% = 10, 85%+ = 0
+  if (totalIncome > 0) {
+    const ratio = stats.monthlyTotal / totalIncome;
+    let pts = ratio < 0.5 ? 35 : ratio < 0.7 ? 20 : ratio < 0.85 ? 10 : 0;
+    components.push({ label: 'Outgoings ratio', pts, max: 35, color: pts >= 25 ? '#1e8a4a' : pts >= 10 ? '#c8820a' : '#c0392b' });
+  } else {
+    components.push({ label: 'Outgoings ratio', pts: 0, max: 35, color: '#9a9490', note: 'Add salaries' });
+  }
+
+  // 2. Savings rate (0-30 pts) — ≥20% = 30, 10-20% = 18, 5-10% = 10, >0 = 5, 0 = 0
+  if (totalIncome > 0) {
+    const savRate = totalSav / totalIncome;
+    let pts = savRate >= 0.20 ? 30 : savRate >= 0.10 ? 18 : savRate >= 0.05 ? 10 : savRate > 0 ? 5 : 0;
+    components.push({ label: 'Savings rate', pts, max: 30, color: pts >= 20 ? '#1e8a4a' : pts >= 10 ? '#c8820a' : '#c0392b' });
+  } else {
+    components.push({ label: 'Savings rate', pts: 0, max: 30, color: '#9a9490', note: 'Add salaries' });
+  }
+
+  // 3. Mortgage efficiency (0-20 pts) — has overpayments = 20, has mortgage configured = 10, no mortgage = 15
+  if (mortgage && mortgage.payment) {
+    const pts = (mortgage.overpay > 0) ? 20 : 10;
+    components.push({ label: 'Mortgage strategy', pts, max: 20, color: pts >= 15 ? '#1e8a4a' : '#c8820a' });
+  } else {
+    components.push({ label: 'Mortgage strategy', pts: 15, max: 20, color: '#5b9cf6', note: 'No mortgage' });
+  }
+
+  // 4. Data completeness (0-15 pts)
+  let pts = 0;
+  if (totalIncome > 0) pts += 5;
+  if (entries.filter(e=>e.active).length >= 3) pts += 5;
+  if (balanceSnapshots.length > 0) pts += 5;
+  components.push({ label: 'Data completeness', pts, max: 15, color: pts >= 12 ? '#1e8a4a' : pts >= 8 ? '#c8820a' : '#c0392b' });
+
+  const total = components.reduce((s,c)=>s+c.pts,0);
+  const maxTotal = components.reduce((s,c)=>s+c.max,0);
+  return { score: Math.round(total), maxScore: maxTotal, components };
+}
+
+function insGetAlerts() {
+  const alerts = [];
+  const stats = calcStats();
+  const ashTH    = salaries.ash   ? salaries.ash.monthlyTakeHome   : 0;
+  const henryTH  = salaries.henry ? salaries.henry.monthlyTakeHome : 0;
+  const totalIncome = ashTH + henryTH;
+  const totalSav = getDefaultSavingAmount('ash') + getDefaultSavingAmount('henry');
+
+  // Balance dip warning
+  const lowBal = insFindLowBalance(500);
+  if (lowBal) {
+    const dateStr = lowBal.date.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+    alerts.push({ type:'red', icon:'⚠', text: `Balance projected to dip below £500 on ${dateStr} (reaching £${lowBal.balance.toFixed(0)}). Review upcoming large payments.` });
+  }
+
+  // High outgoings ratio
+  if (totalIncome > 0) {
+    const ratio = stats.monthlyTotal / totalIncome * 100;
+    if (ratio > 90) {
+      alerts.push({ type:'red', icon:'⚠', text: `Outgoings are ${ratio.toFixed(0)}% of take-home — very little margin. Look for expenses to cut.` });
+    } else if (ratio > 75) {
+      alerts.push({ type:'amber', icon:'⚡', text: `Outgoings are ${ratio.toFixed(0)}% of take-home. You have £${fmt(totalIncome - stats.monthlyTotal)} discretionary income per month.` });
+    } else if (ratio < 55) {
+      alerts.push({ type:'green', icon:'✓', text: `Strong cash flow — outgoings are only ${ratio.toFixed(0)}% of take-home, leaving £${fmt(totalIncome - stats.monthlyTotal)}/month discretionary.` });
+    }
+  }
+
+  // Savings rate check
+  if (totalIncome > 0 && totalSav === 0) {
+    alerts.push({ type:'amber', icon:'💡', text: `No savings transfers are scheduled. Financial advisors recommend saving at least 20% of take-home. Set up a savings plan in the Savings tab.` });
+  } else if (totalIncome > 0 && totalSav / totalIncome < 0.05) {
+    alerts.push({ type:'amber', icon:'💡', text: `Savings rate is ${(totalSav/totalIncome*100).toFixed(1)}%. Consider increasing towards 20% (£${fmt(totalIncome * 0.2 - totalSav)}/month more) for long-term security.` });
+  }
+
+  // Mortgage overpayment prompt
+  if (mortgage && mortgage.payment && !mortgage.overpay) {
+    const standard = calcMortgagePayoff(mortgage.balance, mortgage.rate, mortgage.payment, 0);
+    if (standard) {
+      alerts.push({ type:'blue', icon:'🏡', text: `No mortgage overpayment set. Even £100/month extra saves significant interest — see the Mortgage Insights section below.` });
+    }
+  }
+
+  // No balance data
+  if (balanceSnapshots.length === 0 && totalIncome > 0) {
+    alerts.push({ type:'blue', icon:'ℹ', text: `Add your current account and savings balances in the Balances tab to unlock projected balance tracking and more accurate insights.` });
+  }
+
+  if (alerts.length === 0) {
+    alerts.push({ type:'green', icon:'✦', text: `No urgent warnings — your finances look well-organised. Check the projections below for longer-term planning.` });
+  }
+
+  return alerts;
+}
+
+function insGetTips() {
+  const tips = [];
+  const stats = calcStats();
+  const ashTH   = salaries.ash   ? salaries.ash.monthlyTakeHome   : 0;
+  const henryTH = salaries.henry ? salaries.henry.monthlyTakeHome : 0;
+  const totalIncome = ashTH + henryTH;
+  const totalSav = getDefaultSavingAmount('ash') + getDefaultSavingAmount('henry');
+  const catBreak = insGetCategoryBreakdown();
+
+  // Tip: biggest non-essential category
+  const nonEssential = catBreak.filter(c => !['Housing','Mortgage','Bills','Insurance','Groceries','Transport'].includes(c.cat));
+  if (nonEssential.length > 0) {
+    const biggest = nonEssential[0];
+    tips.push({ text: `Your largest discretionary category is ${catDisplayName(biggest.cat)} at ${fmt(biggest.amt)}/month (${biggest.pct.toFixed(0)}% of outgoings). Even a 25% reduction would free up ${fmt(biggest.amt * 0.25)}/month.`, impact: 'medium' });
+  }
+
+  // Tip: savings to 20%
+  if (totalIncome > 0 && totalSav < totalIncome * 0.20) {
+    const gap = totalIncome * 0.20 - totalSav;
+    tips.push({ text: `Increasing monthly savings by ${fmt(gap)} would reach the recommended 20% savings rate, adding ${fmt(gap * 12)}/year to your savings pot.`, impact: totalSav === 0 ? 'high' : 'medium' });
+  }
+
+  // Tip: mortgage overpayment
+  if (mortgage && mortgage.payment && mortgage.balance && mortgage.rate) {
+    const baseline = calcMortgagePayoff(mortgage.balance, mortgage.rate, mortgage.payment, mortgage.overpay || 0);
+    const extra100 = calcMortgagePayoff(mortgage.balance, mortgage.rate, mortgage.payment, (mortgage.overpay || 0) + 100);
+    if (baseline && extra100) {
+      const mthsSaved = baseline.months - extra100.months;
+      const intSaved  = baseline.totalInterest - extra100.totalInterest;
+      if (intSaved > 100) {
+        tips.push({ text: `Adding just £100/month to your mortgage overpayment would save ${insMonthsToStr(mthsSaved)} and ${fmt(intSaved)} in interest over the life of the mortgage.`, impact: 'high' });
+      }
+    }
+  }
+
+  // Tip: yearly subscription check
+  const yearlyEntries = entries.filter(e => e.active && e.frequency === 'yearly');
+  if (yearlyEntries.length >= 3) {
+    const yearlyTotal = yearlyEntries.reduce((s,e) => s+e.amount, 0);
+    tips.push({ text: `You have ${yearlyEntries.length} annual subscriptions/payments totalling ${fmt(yearlyTotal)}/year. Review whether all are still needed.`, impact: 'low' });
+  }
+
+  // Tip: pension check
+  const hasPension = (salaries.ash && (salaries.ash.pensionPct || 0) > 0) || (salaries.henry && (salaries.henry.pensionPct || 0) > 0);
+  if (!hasPension && totalIncome > 0) {
+    tips.push({ text: `Employer pension contributions aren't configured. Making sure pension contributions are correct ensures you're not leaving free employer top-ups on the table.`, impact: 'high' });
+  }
+
+  // Generic tip if not many tips yet
+  if (tips.length < 2) {
+    tips.push({ text: `Review your Actuals tab monthly — comparing scheduled vs real spending highlights where your money actually goes vs where you think it goes.`, impact: 'low' });
+  }
+
+  return tips.slice(0, 5);
+}
+
+function renderInsights() {
+  const grid = document.getElementById('insightsGrid');
+  if (!grid) return;
+
+  const stats       = calcStats();
+  const ashTH       = salaries.ash   ? salaries.ash.monthlyTakeHome   : 0;
+  const henryTH     = salaries.henry ? salaries.henry.monthlyTakeHome : 0;
+  const totalIncome = ashTH + henryTH;
+  const totalSav    = getDefaultSavingAmount('ash') + getDefaultSavingAmount('henry');
+  const netMonthly  = totalIncome - stats.monthlyTotal;
+  const savRate     = totalIncome > 0 ? (totalSav / totalIncome * 100) : 0;
+  const outRatio    = totalIncome > 0 ? (stats.monthlyTotal / totalIncome * 100) : 0;
+
+  const health = insGetHealthScore();
+  const alerts = insGetAlerts();
+  const catBreak = insGetCategoryBreakdown();
+  const tips = insGetTips();
+
+  // ── Health score ring ──
+  const scoreColor = health.score >= 75 ? '#1e8a4a' : health.score >= 50 ? '#c8820a' : '#c0392b';
+  const circumference = 2 * Math.PI * 32;
+  const dashLen = (health.score / health.maxScore) * circumference;
+  const healthHtml = `
+  <div class="ins-card">
+    <div class="ins-card-title"><span class="ins-card-title-icon">✦</span> Financial Health Score</div>
+    <div class="ins-score-wrap">
+      <div class="ins-score-ring">
+        <svg viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="32" fill="none" stroke="var(--border2)" stroke-width="5"/>
+          <circle cx="40" cy="40" r="32" fill="none" stroke="${scoreColor}" stroke-width="5"
+            stroke-dasharray="${dashLen.toFixed(1)} ${(circumference-dashLen).toFixed(1)}"
+            stroke-dashoffset="${(circumference/4).toFixed(1)}" stroke-linecap="round"/>
+        </svg>
+        <div class="ins-score-num" style="color:${scoreColor};">${health.score}</div>
+      </div>
+      <div class="ins-score-lines">
+        ${health.components.map(c => `
+          <div class="ins-score-line">
+            <span class="ins-score-label">${c.label}${c.note ? ' <span style="color:var(--text-muted);font-size:9px;">('+c.note+')</span>' : ''}</span>
+            <div class="ins-score-bar"><div class="ins-score-fill" style="width:${c.pts/c.max*100}%;background:${c.color};"></div></div>
+            <span class="ins-score-pts">${c.pts}/${c.max}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+
+  // ── Alerts ──
+  const alertsHtml = `
+  <div class="ins-card">
+    <div class="ins-card-title"><span class="ins-card-title-icon">⚡</span> Alerts &amp; Notices</div>
+    ${alerts.map(a => `<div class="ins-alert ${a.type}"><span class="ins-alert-icon">${a.icon}</span><span class="ins-alert-text">${a.text}</span></div>`).join('')}
+  </div>`;
+
+  // ── Key stats ──
+  const statsHtml = `
+  <div class="ins-card full" style="border-top:1px solid var(--border);">
+    <div class="ins-card-title"><span class="ins-card-title-icon">◆</span> Key Monthly Numbers</div>
+    <div class="ins-stat-row">
+      <div class="ins-stat">
+        <div class="ins-stat-label">Monthly Outgoings</div>
+        <div class="ins-stat-val" style="color:var(--red);">−${fmt(stats.monthlyTotal)}</div>
+        <div class="ins-stat-sub">${fmt(stats.yearlyTotal)}/year · ${stats.count} payments</div>
+      </div>
+      <div class="ins-stat">
+        <div class="ins-stat-label">Take-Home Income</div>
+        <div class="ins-stat-val" style="color:var(--green);">${totalIncome > 0 ? '+'+fmt(totalIncome) : '—'}</div>
+        <div class="ins-stat-sub">${totalIncome > 0 ? fmt(totalIncome*12)+'/year' : 'Add salaries to unlock'}</div>
+      </div>
+      <div class="ins-stat">
+        <div class="ins-stat-label">Monthly Net</div>
+        <div class="ins-stat-val" style="color:${netMonthly>=0?'var(--green)':'var(--red)'};">${totalIncome>0?(netMonthly>=0?'+':'-')+fmt(Math.abs(netMonthly)):'—'}</div>
+        <div class="ins-stat-sub">${totalIncome>0?fmt(Math.abs(netMonthly*12))+'/year · '+(outRatio.toFixed(0))+'% committed':''}</div>
+      </div>
+      <div class="ins-stat">
+        <div class="ins-stat-label">Monthly Savings</div>
+        <div class="ins-stat-val" style="color:#5b9cf6;">${totalSav > 0 ? '+'+fmt(totalSav) : '—'}</div>
+        <div class="ins-stat-sub">${totalSav > 0 ? savRate.toFixed(1)+'% of income · '+fmt(totalSav*12)+'/yr' : 'Set up in Savings tab'}</div>
+      </div>
+      <div class="ins-stat">
+        <div class="ins-stat-label">Discretionary</div>
+        <div class="ins-stat-val">${totalIncome>0 ? fmt(Math.max(0,netMonthly-totalSav)) : '—'}</div>
+        <div class="ins-stat-sub">${totalIncome>0?'after bills &amp; savings':''}</div>
+      </div>
+      <div class="ins-stat">
+        <div class="ins-stat-label">Outgoings Ratio</div>
+        <div class="ins-stat-val" style="color:${outRatio<65?'var(--green)':outRatio<80?'var(--amber)':'var(--red)'};">${totalIncome>0?outRatio.toFixed(0)+'%':'—'}</div>
+        <div class="ins-stat-sub">${outRatio<65?'healthy':'target is under 65%'}</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Mortgage intelligence ──
+  let mortHtml = '';
+  if (mortgage && mortgage.payment && mortgage.balance && mortgage.rate) {
+    const basePayoff = calcMortgagePayoff(mortgage.balance, mortgage.rate, mortgage.payment, 0);
+    const withOvp    = mortgage.overpay > 0 ? calcMortgagePayoff(mortgage.balance, mortgage.rate, mortgage.payment, mortgage.overpay) : null;
+    const today      = new Date();
+    const baseDateStr = basePayoff ? new Date(today.getFullYear(), today.getMonth() + basePayoff.months, 1).toLocaleDateString('en-GB', { month:'short', year:'numeric' }) : '—';
+    const ovpDateStr  = withOvp   ? new Date(today.getFullYear(), today.getMonth() + withOvp.months,  1).toLocaleDateString('en-GB', { month:'short', year:'numeric' }) : null;
+
+    // What-if rows
+    const whatIfRows = [50, 100, 200, 500].map(extra => {
+      const ovpBase = mortgage.overpay || 0;
+      const withExtra = calcMortgagePayoff(mortgage.balance, mortgage.rate, mortgage.payment, ovpBase + extra);
+      if (!withExtra) return null;
+      const base = withOvp || basePayoff;
+      const mSaved = base.months - withExtra.months;
+      const intSaved = base.totalInterest - withExtra.totalInterest;
+      return { extra, mSaved, intSaved };
+    }).filter(Boolean);
+
+    mortHtml = `
+  <div class="ins-card full" style="border-top:1px solid var(--border);">
+    <div class="ins-card-title"><span class="ins-card-title-icon">🏡</span> Mortgage Intelligence</div>
+    <div class="ins-mort-row">
+      <div class="ins-mort-cell">
+        <div class="ins-mort-label">Outstanding Balance</div>
+        <div class="ins-mort-val">${fmt(mortgage.balance)}</div>
+      </div>
+      <div class="ins-mort-cell">
+        <div class="ins-mort-label">Standard Payoff</div>
+        <div class="ins-mort-val">${baseDateStr}</div>
+        <div class="ins-stat-sub">${insMonthsToStr(basePayoff?.months)} · £${Math.round(basePayoff?.totalInterest||0).toLocaleString()} interest</div>
+      </div>
+      ${withOvp ? `
+      <div class="ins-mort-cell">
+        <div class="ins-mort-label">With £${mortgage.overpay}/mo Overpayment</div>
+        <div class="ins-mort-val" style="color:var(--green);">${ovpDateStr}</div>
+        <div class="ins-stat-sub">${insMonthsToStr(withOvp.months)} · saves ${insMonthsToStr(basePayoff.months - withOvp.months)}</div>
+      </div>
+      <div class="ins-mort-cell">
+        <div class="ins-mort-label">Interest Saved by Overpaying</div>
+        <div class="ins-mort-val" style="color:var(--green);">${fmt(basePayoff.totalInterest - withOvp.totalInterest)}</div>
+        <div class="ins-stat-sub">by paying extra £${mortgage.overpay}/mo</div>
+      </div>` : ''}
+    </div>
+    ${withOvp ? `<div class="ins-mort-saving">✓ Your overpayments will pay off your mortgage ${insMonthsToStr(basePayoff.months - withOvp.months)} early and save ${fmt(basePayoff.totalInterest - withOvp.totalInterest)} in interest.</div>` : ''}
+    ${whatIfRows.length > 0 ? `
+    <div class="ins-what-if">
+      <div class="ins-what-if-title">What if you paid ${mortgage.overpay > 0 ? 'even more' : 'extra'} each month?</div>
+      ${whatIfRows.map(r => `
+        <div class="ins-what-if-row">
+          <span class="ins-what-if-label">+£${r.extra}/mo</span>
+          <span class="ins-what-if-result">saves ${insMonthsToStr(r.mSaved)} off your term</span>
+          <span class="ins-what-if-saving">${fmt(r.intSaved)} saved</span>
+        </div>`).join('')}
+    </div>` : ''}
+  </div>`;
+  }
+
+  // ── Savings projection ──
+  let savingsHtml = '';
+  if (totalSav > 0) {
+    const latestAsh   = balanceSnapshots.filter(x=>x.person==='ash').sort((a,b)=>b.date.localeCompare(a.date))[0];
+    const latestHenry = balanceSnapshots.filter(x=>x.person==='henry').sort((a,b)=>b.date.localeCompare(a.date))[0];
+    const currentPot = (latestAsh ? latestAsh.savings || 0 : 0) + (latestHenry ? latestHenry.savings || 0 : 0);
+    const RATE = 0.04; // assume 4% savings interest
+    const project = months => {
+      let pot = currentPot;
+      const mr = RATE / 12;
+      for (let i = 0; i < months; i++) pot = pot * (1 + mr) + totalSav;
+      return pot;
+    };
+    const p1 = project(12), p3 = project(36), p5 = project(60);
+    savingsHtml = `
+  <div class="ins-card full" style="border-top:1px solid var(--border);">
+    <div class="ins-card-title"><span class="ins-card-title-icon">📈</span> Savings Projections <span style="font-size:9px;color:var(--text-muted);font-weight:400;text-transform:none;letter-spacing:0;">(assumes 4% interest p.a.)</span></div>
+    <div class="ins-sav-row">
+      <div class="ins-sav-cell">
+        <div class="ins-sav-horizon">1 Year</div>
+        <div class="ins-sav-amount">${fmt(p1)}</div>
+        <div class="ins-sav-sub">+${fmt(p1-currentPot)} growth</div>
+      </div>
+      <div class="ins-sav-cell">
+        <div class="ins-sav-horizon">3 Years</div>
+        <div class="ins-sav-amount">${fmt(p3)}</div>
+        <div class="ins-sav-sub">+${fmt(p3-currentPot)} growth</div>
+      </div>
+      <div class="ins-sav-cell">
+        <div class="ins-sav-horizon">5 Years</div>
+        <div class="ins-sav-amount">${fmt(p5)}</div>
+        <div class="ins-sav-sub">+${fmt(p5-currentPot)} growth</div>
+      </div>
+    </div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-top:8px;">
+      Current savings pot: ${fmt(currentPot)} · Adding ${fmt(totalSav)}/month · ${savRate.toFixed(1)}% of income
+    </div>
+  </div>`;
+  }
+
+  // ── Category breakdown ──
+  const maxAmt = catBreak[0]?.amt || 1;
+  const catColors = ['#c0392b','#e67e22','#c8820a','#27ae60','#2980b9','#8e44ad','#16a085','#d35400','#7f8c8d','#2c3e50'];
+  const catHtml = `
+  <div class="ins-card" style="border-top:1px solid var(--border);">
+    <div class="ins-card-title"><span class="ins-card-title-icon">◉</span> Spend by Category</div>
+    ${catBreak.slice(0,10).map((c,i) => `
+      <div class="ins-cat-row">
+        <span class="ins-cat-dot" style="background:${catColors[i%catColors.length]};"></span>
+        <span class="ins-cat-name">${catDisplayName(c.cat)}</span>
+        <div class="ins-cat-bar-wrap"><div class="ins-cat-bar" style="width:${c.amt/maxAmt*100}%;background:${catColors[i%catColors.length]};"></div></div>
+        <span class="ins-cat-pct">${c.pct.toFixed(0)}%</span>
+        <span class="ins-cat-amt">${fmt(c.amt)}</span>
+      </div>`).join('')}
+  </div>`;
+
+  // ── Tips ──
+  const impactLabel = i => ({ high:'High impact', medium:'Medium', low:'Quick win' })[i] || '';
+  const tipsHtml = `
+  <div class="ins-card" style="border-top:1px solid var(--border);">
+    <div class="ins-card-title"><span class="ins-card-title-icon">💡</span> Recommendations</div>
+    ${tips.map((t,i) => `
+      <div class="ins-tip">
+        <span class="ins-tip-num">${i+1}</span>
+        <span class="ins-tip-text">${t.text}</span>
+        <span class="ins-tip-impact ${t.impact}">${impactLabel(t.impact)}</span>
+      </div>`).join('')}
+  </div>`;
+
+  // ── AI Analysis (Cloudflare Workers AI) ──
+  // Derive the AI endpoint from the existing API_BASE — no separate worker needed
+  const aiEndpoint = API_BASE.replace('/api/data', '/api/ai-analysis');
+  const aiHtml = `
+  <div class="ins-card full" style="border-top:1px solid var(--border);">
+    <div class="ins-card-title"><span class="ins-card-title-icon">✦</span> AI Analysis <span style="font-size:9px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--text-muted);">— Llama via your Cloudflare Worker</span></div>
+    <div class="ins-ai-wrap">
+      <div class="ins-ai-note">Uses your existing Worker. One setup step needed: add a <strong>Workers AI binding</strong> named <code style="background:var(--surface3);padding:1px 5px;font-family:var(--mono);">AI</code> in your Worker's <strong>Settings → Bindings</strong> — then click Analyse. No new Worker needed. Only summary figures are sent (no personal data).</div>
+      <div>
+        <button class="ins-ai-btn" id="insAiBtn" onclick="runAiAnalysis()">✦ Analyse with Llama</button>
+      </div>
+      <div class="ins-ai-result" id="insAiResult"></div>
+    </div>
+  </div>`;
+
+  grid.innerHTML = healthHtml + alertsHtml + statsHtml + mortHtml + savingsHtml + catHtml + tipsHtml + aiHtml;
+}
+
+async function runAiAnalysis() {
+  const aiEndpoint = API_BASE.replace('/api/data', '/api/ai-analysis');
+  const btn = document.getElementById('insAiBtn');
+  const result = document.getElementById('insAiResult');
+  btn.disabled = true; btn.textContent = '⟳ Analysing…';
+  result.classList.remove('visible'); result.textContent = '';
+  try {
+    const stats = calcStats();
+    const ashTH   = salaries.ash   ? salaries.ash.monthlyTakeHome   : 0;
+    const henryTH = salaries.henry ? salaries.henry.monthlyTakeHome : 0;
+    const totalIncome = ashTH + henryTH;
+    const totalSav = getDefaultSavingAmount('ash') + getDefaultSavingAmount('henry');
+    const catBreak = insGetCategoryBreakdown();
+    const payload = {
+      monthlyOutgoings: stats.monthlyTotal.toFixed(2),
+      monthlyIncome:    totalIncome.toFixed(2),
+      netMonthly:       (totalIncome - stats.monthlyTotal).toFixed(2),
+      savingsRate:      totalIncome > 0 ? (totalSav/totalIncome*100).toFixed(1) : '0',
+      mortgageBalance:  mortgage ? (mortgage.balance || 0).toFixed(0) : null,
+      mortgagePayment:  mortgage ? (mortgage.payment || 0).toFixed(0) : null,
+      mortgageOverpay:  mortgage ? (mortgage.overpay || 0).toFixed(0) : null,
+      categories: catBreak.slice(0,8).map(c => ({ name: catDisplayName(c.cat), monthly: c.amt.toFixed(0), pct: c.pct.toFixed(0) })),
+      healthScore: insGetHealthScore().score,
+    };
+    const resp = await fetch(aiEndpoint, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) {
+      const errBody = await resp.json().catch(() => ({ error: resp.statusText }));
+      throw new Error(errBody.error || `HTTP ${resp.status}`);
+    }
+    const data = await resp.json();
+    result.textContent = data.result || data.response || JSON.stringify(data);
+    result.classList.add('visible');
+  } catch (e) {
+    result.textContent = 'Error: ' + e.message + '\n\nMake sure the Workers AI binding named "AI" is added in your Worker\'s Settings → Bindings, then redeploy.';
+    result.classList.add('visible');
+  }
+  btn.disabled = false; btn.textContent = '✦ Analyse with Llama';
+}
+
+// ─────────────────────────────────────────
 // VIEWS
 // ─────────────────────────────────────────
 let currentView = 'dashboard';
@@ -5217,6 +6130,7 @@ function switchView(view) {
   if (view === 'balances') renderBalances();
   if (view === 'savings') restoreSavingsInputs();
   if (view === 'actuals') { initActualsToolbar(); renderActualsEditor(); }
+  if (view === 'insights') renderInsights();
 }
 
 function renderAll() {
@@ -5229,6 +6143,7 @@ function renderAll() {
   if (currentView === 'balances') renderBalances();
   if (currentView === 'savings') restoreSavingsInputs();
   if (currentView === 'actuals') { initActualsToolbar(); renderActualsEditor(); }
+  if (currentView === 'insights') renderInsights();
 }
 
 // ─────────────────────────────────────────
