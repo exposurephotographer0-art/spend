@@ -4255,6 +4255,46 @@ function renderChart() {
     });
   }
 
+  // ── Actuals cumulative spend line ──
+  // Build per-day actual spend from all saved actualsData
+  const _dailyActuals = {};
+  Object.values(actualsData).forEach(md => {
+    if (!md.rows) return;
+    md.rows.forEach(r => {
+      const amt = parseFloat(r.amount) || 0;
+      if (amt > 0) _dailyActuals[r.date] = (_dailyActuals[r.date] || 0) + amt;
+    });
+  });
+  const _todayStr = new Date().toISOString().slice(0,10);
+  let _cumActual = 0;
+  let _hasActualData = false;
+  const actualsLine = allLabels.map(k => {
+    const iso = new Date(k).toISOString().slice(0,10);
+    if (iso > _todayStr) return null; // stop at today
+    if (_dailyActuals[iso] !== undefined) {
+      _cumActual += _dailyActuals[iso];
+      _hasActualData = true;
+    }
+    return _hasActualData ? _cumActual : null;
+  });
+  if (_hasActualData) {
+    datasets.push({
+      label: 'Actual Spend (cumulative)',
+      data: actualsLine,
+      type: 'line',
+      borderColor: '#c0392b',
+      backgroundColor: 'rgba(192,57,43,0.06)',
+      borderWidth: 2.5,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      fill: false,
+      tension: 0.3,
+      yAxisID: 'y2',
+      order: 0,
+      spanGaps: true,
+    });
+  }
+
   chartInstance = new Chart(ctx, {
     type: 'bar',
     data: { labels: fmtLabels, datasets },
@@ -4794,6 +4834,7 @@ function saveActualsMonth() {
   pendingActualRows = [];
   renderActualsEditor();
   renderActualsDashChart();
+  renderChart(); // refresh dashboard actuals line
   // Show actuals chart on dashboard
   const area = document.getElementById('actualsChartArea');
   if (area) area.style.display = 'block';
@@ -4805,6 +4846,7 @@ function deleteActualsMonth(key) {
   saveActualsData();
   renderActualsSavedList();
   renderActualsDashChart();
+  renderChart(); // refresh dashboard actuals line
   const area = document.getElementById('actualsChartArea');
   if (area && Object.keys(actualsData).length === 0) area.style.display = 'none';
 }
@@ -5055,15 +5097,8 @@ function autoCategory(description, existingCat) {
 
 function handleExcelFile(event) {
   const file = event.target.files[0];
-  // Reset the input so the same file can be re-imported
   event.target.value = '';
   if (!file) return;
-
-  const mSel = document.getElementById('actuals-month-sel');
-  const ySel = document.getElementById('actuals-year-sel');
-  if (!mSel || !ySel) return;
-  const selectedMonth = parseInt(mSel.value); // 0-indexed
-  const selectedYear = parseInt(ySel.value);
 
   const reader = new FileReader();
   reader.onload = (e) => {
@@ -5074,11 +5109,10 @@ function handleExcelFile(event) {
       const sheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
 
-      // Filter to the selected month/year, only outgoings
-      const imported = [];
+      // Parse ALL outgoing transactions and group by YYYY-MM
+      const byMonth = {}; // { 'YYYY-MM': [{...}, ...] }
       let skipped = 0;
       for (const row of rows) {
-        // Date column can be a JS Date (cellDates:true) or a string
         let dateVal = row['Date'] || row['date'] || null;
         let dateObj = null;
         if (dateVal instanceof Date) {
@@ -5086,29 +5120,28 @@ function handleExcelFile(event) {
         } else if (typeof dateVal === 'string') {
           dateObj = new Date(dateVal);
         } else if (typeof dateVal === 'number') {
-          // Excel serial number fallback
-          dateObj = XLSX.SSF.parse_date_code(dateVal);
-          dateObj = dateObj ? new Date(dateObj.y, dateObj.m - 1, dateObj.d) : null;
+          const parsed = XLSX.SSF.parse_date_code(dateVal);
+          dateObj = parsed ? new Date(parsed.y, parsed.m - 1, parsed.d) : null;
         }
         if (!dateObj || isNaN(dateObj.getTime())) { skipped++; continue; }
-        if (dateObj.getFullYear() !== selectedYear || dateObj.getMonth() !== selectedMonth) continue;
 
         const moneyOut = parseFloat(row['Money Out (£)'] || row['Money Out'] || row['Debit'] || row['Amount'] || 0);
-        if (moneyOut <= 0) continue; // skip income / zero rows
+        if (moneyOut <= 0) continue;
 
         const description = String(row['Description'] || row['Merchant'] || row['Payee'] || row['Memo'] || '').trim();
-        const existingCat  = String(row['Category'] || '').trim();
-        const person       = String(row['Person'] || '').trim().toLowerCase();
+        const existingCat = String(row['Category'] || '').trim();
+        const person      = String(row['Person'] || '').trim().toLowerCase();
 
-        // Map person name to owner
         let owner = 'joint';
         if (person.includes('henry')) owner = 'henry';
         else if (person.includes('ash')) owner = 'ash';
 
         const dateStr = dateObj.toISOString().slice(0,10);
+        const key = dateStr.slice(0,7); // YYYY-MM
         const cat = autoCategory(description, existingCat);
 
-        imported.push({
+        if (!byMonth[key]) byMonth[key] = [];
+        byMonth[key].push({
           id: Math.random().toString(36).slice(2,10),
           date: dateStr,
           name: description,
@@ -5118,19 +5151,49 @@ function handleExcelFile(event) {
         });
       }
 
-      if (imported.length === 0) {
-        alert(`No outgoing transactions found for ${MONTHS_FULL[selectedMonth]} ${selectedYear} in the Excel file.\n\nMake sure the sheet has a 'Date' column and 'Money Out (£)' column.`);
+      const monthKeys = Object.keys(byMonth).sort();
+      if (monthKeys.length === 0) {
+        alert('No outgoing transactions found in the Excel file.\n\nMake sure the sheet has a \'Date\' column and \'Money Out (£)\' column.');
         return;
       }
 
-      // Sort by date
-      imported.sort((a,b) => a.date.localeCompare(b.date));
+      // Check for months that already have saved data
+      const conflicts = monthKeys.filter(k => actualsData[k] && actualsData[k].rows && actualsData[k].rows.length > 0);
+      if (conflicts.length > 0) {
+        const names = conflicts.map(k => { const [y,m] = k.split('-'); return `${MONTHS_FULL[parseInt(m)-1]} ${y}`; }).join(', ');
+        const ok = confirm(`The following months already have saved data:\n${names}\n\nMerge the imported transactions with the existing ones?`);
+        if (!ok) return;
+      }
 
-      // Merge with any existing pending rows (avoid duplicates by id)
-      const existingIds = new Set(pendingActualRows.map(r => r.id));
-      const newRows = imported.filter(r => !existingIds.has(r.id));
-      pendingActualRows = [...pendingActualRows, ...newRows];
+      // Save each month directly into actualsData
+      let totalImported = 0;
+      monthKeys.forEach(key => {
+        const newRows = byMonth[key].sort((a,b) => a.date.localeCompare(b.date));
+        if (actualsData[key] && actualsData[key].rows) {
+          // Merge: append new rows to existing
+          actualsData[key].rows = [...actualsData[key].rows, ...newRows];
+        } else {
+          actualsData[key] = { saved: true, rows: newRows };
+        }
+        totalImported += newRows.length;
+      });
+
+      saveActualsData();
+      renderChart(); // update dashboard actuals line
+
+      // Refresh the editor for the currently selected month
+      pendingActualRows = [];
       renderActualsEditor();
+      renderActualsSavedList();
+      renderActualsDashChart();
+      const area = document.getElementById('actualsChartArea');
+      if (area) area.style.display = 'block';
+
+      // Summary banner
+      const monthSummary = monthKeys.map(k => {
+        const [y,m] = k.split('-');
+        return `${MONTHS_FULL[parseInt(m)-1]} ${y} (${byMonth[k].length})`;
+      }).join(', ');
 
       // Show a banner
       const editor = document.getElementById('actuals-editor');
@@ -5139,7 +5202,7 @@ function handleExcelFile(event) {
       const banner = document.createElement('div');
       banner.id = 'actuals-import-banner';
       banner.className = 'actuals-import-banner';
-      banner.innerHTML = `✓ Imported <strong>${imported.length}</strong> transactions from "${file.name}"${skipped > 0 ? ` (${skipped} rows skipped)` : ''}. Review categories below then hit <strong>Save Month</strong>.`;
+      banner.innerHTML = `✓ Imported <strong>${totalImported}</strong> transactions across <strong>${monthKeys.length}</strong> month${monthKeys.length !== 1 ? 's' : ''} and saved automatically${skipped > 0 ? ` (${skipped} rows skipped)` : ''}.<br><span style="font-size:10px;opacity:0.8;">${monthSummary}</span>`;
       editor.prepend(banner);
 
     } catch (err) {
