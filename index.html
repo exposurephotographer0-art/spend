@@ -9,6 +9,7 @@
 <title>Ledger — Finance Forecaster</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg: #f5f4f1;
@@ -1287,6 +1288,123 @@
     margin-bottom: 5px;
   }
 
+  /* ACTUALS IMPORT & COMPARE */
+  .actuals-import-banner {
+    background: var(--amber-glow);
+    border: 1px solid rgba(200,130,10,0.25);
+    border-radius: 3px;
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber-dim);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .avb-section {
+    margin-top: 28px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+  .avb-section-title {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+  }
+  .avb-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 80px 80px 70px;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .avb-row:last-child { border-bottom: none; }
+  .avb-cat {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .avb-bar-wrap {
+    height: 6px;
+    background: var(--surface3);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .avb-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s;
+  }
+  .avb-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-align: right;
+    color: var(--text-dim);
+  }
+  .avb-variance {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: right;
+  }
+  .avb-over { color: var(--red); }
+  .avb-under { color: var(--green); }
+  .avb-col-headers {
+    display: grid;
+    grid-template-columns: 130px 1fr 80px 80px 70px;
+    gap: 10px;
+    padding: 0 0 6px 0;
+    border-bottom: 1px solid var(--border2);
+    margin-bottom: 2px;
+  }
+  .avb-col-hdr {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-align: right;
+  }
+  .avb-col-hdr:first-child, .avb-col-hdr:nth-child(2) { text-align: left; }
+  .avb-summary {
+    display: flex;
+    gap: 16px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+  .avb-summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .avb-summary-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .avb-summary-val {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 300;
+    color: var(--text);
+  }
+
   /* ACTUALS DASHBOARD CHART */
   .actuals-chart-area {
     padding: 20px 24px 16px;
@@ -2480,6 +2598,8 @@
           <select class="form-select" id="actuals-month-sel" style="width:140px;padding:6px 10px;font-size:11px;" onchange="pendingActualRows=[];renderActualsEditor()"></select>
           <select class="form-select" id="actuals-year-sel" style="width:90px;padding:6px 10px;font-size:11px;" onchange="pendingActualRows=[];renderActualsEditor()"></select>
           <div style="flex:1;"></div>
+          <input type="file" id="excel-import-input" accept=".xlsx,.xls" style="display:none;" onchange="handleExcelFile(event)" />
+          <button class="btn btn-ghost" style="font-size:10px;" onclick="document.getElementById('excel-import-input').click()">↑ Import Excel</button>
           <button class="btn btn-ghost" style="font-size:10px;" onclick="addActualRow()">+ Add Line</button>
           <button class="btn btn-primary" style="font-size:10px;" onclick="saveActualsMonth()">Save Month</button>
         </div>
@@ -2494,6 +2614,8 @@
             <div style="font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">Saved Months</div>
             <div id="actuals-saved-list"></div>
           </div>
+          <!-- Actuals vs Budget compare panel -->
+          <div id="actuals-vs-budget"></div>
         </div>
       </div>
     </div>
@@ -4721,6 +4843,7 @@ function renderActualsSavedList() {
         <div style="display:flex;align-items:center;gap:14px;">
           <span style="font-family:var(--mono);font-size:10px;color:var(--text-muted);">${rows.length} transactions</span>
           <span class="actuals-month-total">−${fmt(total)}</span>
+          <button onclick="event.stopPropagation();renderActualsVsBudget('${key}')" style="background:none;border:1px solid var(--border2);color:var(--amber);font-family:var(--mono);font-size:9px;letter-spacing:0.08em;cursor:pointer;padding:3px 10px;" title="Analyse vs Budget">Analyse</button>
           <button onclick="event.stopPropagation();deleteActualsMonth('${key}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:2px 6px;" title="Delete">✕</button>
         </div>
       </div>
@@ -4841,6 +4964,316 @@ function renderActualsDashChart() {
     }
   });
 }
+// ─────────────────────────────────────────
+// EXCEL IMPORT & AUTO-CATEGORISATION
+// ─────────────────────────────────────────
+
+// Keyword map: category -> array of patterns to look for in description
+const CAT_KEYWORDS = {
+  Groceries: [
+    'sainsbury','tesco','lidl','asda','morrisons','morrison','waitrose','aldi','coop','co-op',
+    'co op','ocado','marks food','m&s food','marks & spencer food','iceland','farmfoods',
+    'whole foods','wholefood','booths','budgens','spar','londis','nisa','premier stores',
+    'symbol group','jacks','morrisons','costco food'
+  ],
+  Food: [
+    'cafe','restaurant','pizza','burger','kfc','mcdonald','nandos','nando','subway','costa',
+    'starbucks','pret','greggs','takeaway','deliveroo','uber eat','just eat','domino',
+    'wagamama','itsu','wasabi','tortilla','chipotle','five guys','leon','gail','bakers',
+    'patisserie','bakery','diner','bistro','brasserie','grill','sushi','chinese',
+    'indian','thai','mexican','tapas','kebab','chippy','fish chips','pub food',
+    'hungry horse','mitchells butler','wetherspoon','spoons','harvester','frankie',
+    'gecko','gorge','gorge somerset','lazy gecko'
+  ],
+  Transport: [
+    'fuel','petrol','shell','bp oil','texaco','esso','gulf','jet petrol','repsol',
+    'parking','car park','ncp ','q-park','ringgo','justpark','paybyphone',
+    'train','rail','gwr','lner','avanti','thameslink','southeastern','southern rail',
+    'national rail','trainline','bus','stagecoach','arriva','first bus','tfl','oyster',
+    'uber','lyft','taxi','bolt ride','addison lee','black cab','auto','halfords',
+    'kwik fit','mot ','tyres','tyre','car wash','toll','m6 toll','dartford','dvla',
+    'aa ','rac ','green flag','motability','ford','vauxhall','toyota','bmw','audi'
+  ],
+  Bills: [
+    'council tax','electricity','electric','edf','british gas','octopus energy','ovo energy',
+    'e.on','npower','bulb','gas ','water rates','thames water','severn trent','united utilities',
+    'welsh water','anglian water','southern water','internet','broadband','bt broadband',
+    'sky broadband','virgin media','plusnet','talktalk','vodafone','ee ','o2 ','three ','giffgaff',
+    'hmrc','tax credit','child benefit','housing benefit','universal credit','direct gov',
+    'phone bill','line rental','tv licence','bbc licence'
+  ],
+  Subscriptions: [
+    'netflix','spotify','amazon prime','disney','apple.com/bill','apple subscri','icloud',
+    'google one','google storage','youtube premium','microsoft 365','microsoft office',
+    'xbox game pass','playstation','nintendo','adobe','dropbox','notion','slack','zoom',
+    'audible','kindle','prime video','now tv','nowtv','paramount','discovery+','britbox',
+    'apple tv','channel 4','itv hub','newspaper','magazine subscri','gym membership'
+  ],
+  Insurance: [
+    'insurance','insure','aviva','axa','legal & general','lloyds insurance','admiral',
+    'direct line','confused','compare market','moneysupermarket','policy','protect',
+    'cover plan','breakdown cover','pet plan','life assurance','home protect','more than',
+    'hastings','esure','sheilas wheels','benenden','vitality','bupa','private health',
+    'critical illness'
+  ],
+  Health: [
+    'pharmacy','boots','lloyds pharmacy','superdrug','dentist','dental','doctor','gp ',
+    'nhs ','hospital','optician','specsavers','vision express','boots opticians',
+    'gym','leisure centre','fitness','david lloyd','pure gym','the gym','anytime fitness',
+    'nuffield','virgin active','better gym','places for people','council leisure',
+    'physio','therapy','counsell','mental health','yoga','pilates','swim','pool'
+  ],
+  Shopping: [
+    'amazon','ebay','asos','next ','h&m','zara','primark','john lewis','argos','ikea',
+    'marks & spencer','m&s ','debenhams','topshop','gap ','uniqlo','cos ','& other stories',
+    'river island','new look','boohoo','missguided','pretty little','shein','vinted',
+    'etsy','notonthehighstreet','not on high street','tk maxx','tkmaxx','home bargains',
+    'b&m ','poundland','wilko','dunelm','the range','b&q','homebase','screwfix','toolstation',
+    'currys','pc world','apple store','samsung','laptop','mobile phone shop','vodafone shop',
+    'card factory','waterstones','smiths','w h smith','clintons','paperchase',
+    'beauty','makeup','cosmetics','perfume','fragrance','lush ','the body shop'
+  ],
+  Savings: [
+    'savings','isa ','isas','investment','vanguard','nutmeg','moneybox','plum ','chip ',
+    'pension','sipp','workplace pension','nest pension','aviva pension','standard life',
+    'transfer to savings','savings transfer','regular saver','fixed rate saver'
+  ],
+};
+
+function autoCategory(description, existingCat) {
+  if (existingCat && existingCat.trim() && existingCat.trim().toLowerCase() !== 'none') {
+    const titleCase = existingCat.trim().charAt(0).toUpperCase() + existingCat.trim().slice(1).toLowerCase();
+    const cats = getCategoryOrder();
+    if (cats.includes(titleCase)) return titleCase;
+  }
+  const desc = (description || '').toLowerCase();
+  for (const [cat, keywords] of Object.entries(CAT_KEYWORDS)) {
+    if (keywords.some(kw => desc.includes(kw))) return cat;
+  }
+  return 'Other';
+}
+
+function handleExcelFile(event) {
+  const file = event.target.files[0];
+  // Reset the input so the same file can be re-imported
+  event.target.value = '';
+  if (!file) return;
+
+  const mSel = document.getElementById('actuals-month-sel');
+  const ySel = document.getElementById('actuals-year-sel');
+  if (!mSel || !ySel) return;
+  const selectedMonth = parseInt(mSel.value); // 0-indexed
+  const selectedYear = parseInt(ySel.value);
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
+
+      // Filter to the selected month/year, only outgoings
+      const imported = [];
+      let skipped = 0;
+      for (const row of rows) {
+        // Date column can be a JS Date (cellDates:true) or a string
+        let dateVal = row['Date'] || row['date'] || null;
+        let dateObj = null;
+        if (dateVal instanceof Date) {
+          dateObj = dateVal;
+        } else if (typeof dateVal === 'string') {
+          dateObj = new Date(dateVal);
+        } else if (typeof dateVal === 'number') {
+          // Excel serial number fallback
+          dateObj = XLSX.SSF.parse_date_code(dateVal);
+          dateObj = dateObj ? new Date(dateObj.y, dateObj.m - 1, dateObj.d) : null;
+        }
+        if (!dateObj || isNaN(dateObj.getTime())) { skipped++; continue; }
+        if (dateObj.getFullYear() !== selectedYear || dateObj.getMonth() !== selectedMonth) continue;
+
+        const moneyOut = parseFloat(row['Money Out (£)'] || row['Money Out'] || row['Debit'] || row['Amount'] || 0);
+        if (moneyOut <= 0) continue; // skip income / zero rows
+
+        const description = String(row['Description'] || row['Merchant'] || row['Payee'] || row['Memo'] || '').trim();
+        const existingCat  = String(row['Category'] || '').trim();
+        const person       = String(row['Person'] || '').trim().toLowerCase();
+
+        // Map person name to owner
+        let owner = 'joint';
+        if (person.includes('henry')) owner = 'henry';
+        else if (person.includes('ash')) owner = 'ash';
+
+        const dateStr = dateObj.toISOString().slice(0,10);
+        const cat = autoCategory(description, existingCat);
+
+        imported.push({
+          id: Math.random().toString(36).slice(2,10),
+          date: dateStr,
+          name: description,
+          category: cat,
+          owner,
+          amount: moneyOut,
+        });
+      }
+
+      if (imported.length === 0) {
+        alert(`No outgoing transactions found for ${MONTHS_FULL[selectedMonth]} ${selectedYear} in the Excel file.\n\nMake sure the sheet has a 'Date' column and 'Money Out (£)' column.`);
+        return;
+      }
+
+      // Sort by date
+      imported.sort((a,b) => a.date.localeCompare(b.date));
+
+      // Merge with any existing pending rows (avoid duplicates by id)
+      const existingIds = new Set(pendingActualRows.map(r => r.id));
+      const newRows = imported.filter(r => !existingIds.has(r.id));
+      pendingActualRows = [...pendingActualRows, ...newRows];
+      renderActualsEditor();
+
+      // Show a banner
+      const editor = document.getElementById('actuals-editor');
+      const old = document.getElementById('actuals-import-banner');
+      if (old) old.remove();
+      const banner = document.createElement('div');
+      banner.id = 'actuals-import-banner';
+      banner.className = 'actuals-import-banner';
+      banner.innerHTML = `✓ Imported <strong>${imported.length}</strong> transactions from "${file.name}"${skipped > 0 ? ` (${skipped} rows skipped)` : ''}. Review categories below then hit <strong>Save Month</strong>.`;
+      editor.prepend(banner);
+
+    } catch (err) {
+      alert('Could not read Excel file: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ─────────────────────────────────────────
+// ACTUALS vs BUDGET ANALYSIS
+// ─────────────────────────────────────────
+
+function entryToMonthly(e) {
+  if (e.frequency === 'weekly')      return e.amount * 4.33;
+  if (e.frequency === 'fortnightly') return e.amount * 26 / 12;
+  if (e.frequency === 'monthly')     return e.amount;
+  if (e.frequency === 'quarterly')   return e.amount / 3;
+  if (e.frequency === 'biannually')  return e.amount / 6;
+  if (e.frequency === 'yearly')      return e.amount / 12;
+  return 0;
+}
+
+function renderActualsVsBudget(key) {
+  const panel = document.getElementById('actuals-vs-budget');
+  if (!panel) return;
+
+  // Scroll to panel
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  const [yr, mo] = key.split('-').map(Number);
+  const monthName = `${MONTHS_FULL[mo-1]} ${yr}`;
+  const saved = actualsData[key];
+  if (!saved) { panel.innerHTML = ''; return; }
+  const rows = saved.rows || [];
+
+  // Actual spend by category
+  const actualByCat = {};
+  rows.forEach(r => {
+    const amt = parseFloat(r.amount) || 0;
+    if (amt <= 0) return;
+    actualByCat[r.category] = (actualByCat[r.category] || 0) + amt;
+  });
+
+  // Budgeted spend by category (monthly equiv)
+  const budgetByCat = {};
+  const activeEntries = entries.filter(e => e.active && !e._mortgageOverpay);
+  activeEntries.forEach(e => {
+    const m = entryToMonthly(e);
+    if (m <= 0) return;
+    budgetByCat[e.category] = (budgetByCat[e.category] || 0) + m;
+  });
+  // Include mortgage if active
+  if (typeof mortgage !== 'undefined' && mortgage && mortgage.payment > 0) {
+    budgetByCat['Bills'] = (budgetByCat['Bills'] || 0) + mortgage.payment;
+  }
+
+  // Merge all categories that appear in either
+  const allCats = [...new Set([...Object.keys(actualByCat), ...Object.keys(budgetByCat)])];
+  // Sort by actual spend desc
+  allCats.sort((a,b) => (actualByCat[b]||0) - (actualByCat[a]||0));
+
+  const totalActual = Object.values(actualByCat).reduce((s,v) => s+v, 0);
+  const totalBudget = Object.values(budgetByCat).reduce((s,v) => s+v, 0);
+  const totalVariance = totalBudget - totalActual; // positive = under budget
+
+  // Max value for bar scaling
+  const maxVal = Math.max(...allCats.map(c => Math.max(actualByCat[c]||0, budgetByCat[c]||0)), 1);
+
+  const rows_html = allCats.map(cat => {
+    const actual  = actualByCat[cat]  || 0;
+    const budget  = budgetByCat[cat]  || 0;
+    const variance = budget - actual; // positive = under, negative = over
+    const barActualPct  = Math.min((actual  / maxVal) * 100, 100);
+    const barBudgetPct  = Math.min((budget / maxVal) * 100, 100);
+    const catColor = (typeof categoryColors !== 'undefined' && categoryColors[cat]) ? categoryColors[cat] : '#c8820a';
+    const vClass = variance < 0 ? 'avb-over' : 'avb-under';
+    const vLabel = variance < 0 ? `+${fmt(Math.abs(variance))} over` : `${fmt(Math.abs(variance))} under`;
+    return `
+      <div class="avb-row">
+        <div class="avb-cat" title="${cat}">${cat}</div>
+        <div>
+          <div class="avb-bar-wrap" title="Actual">
+            <div class="avb-bar-fill" style="width:${barActualPct}%;background:${catColor};opacity:0.9;"></div>
+          </div>
+          <div class="avb-bar-wrap" style="margin-top:3px;" title="Budget">
+            <div class="avb-bar-fill" style="width:${barBudgetPct}%;background:${catColor};opacity:0.3;border:1px dashed ${catColor};"></div>
+          </div>
+        </div>
+        <div class="avb-num">${actual > 0 ? fmt(actual) : '—'}</div>
+        <div class="avb-num" style="color:var(--text-muted);">${budget > 0 ? fmt(budget) : '—'}</div>
+        <div class="avb-variance ${budget > 0 || actual > 0 ? vClass : ''}">${budget > 0 || actual > 0 ? vLabel : '—'}</div>
+      </div>`;
+  }).join('');
+
+  const totalVClass = totalVariance < 0 ? 'avb-over' : 'avb-under';
+  const totalVLabel = totalVariance < 0 ? `£${Math.abs(totalVariance).toFixed(0)} over budget` : `£${totalVariance.toFixed(0)} under budget`;
+
+  panel.innerHTML = `
+    <div class="avb-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div class="avb-section-title">Actuals vs Budget — ${monthName}</div>
+        <button onclick="document.getElementById('actuals-vs-budget').innerHTML=''" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;padding:0 4px;" title="Close">✕</button>
+      </div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text-muted);margin-bottom:12px;">Solid bar = actual spend · Faded bar = scheduled budget</div>
+      <div class="avb-col-headers">
+        <div class="avb-col-hdr">Category</div>
+        <div class="avb-col-hdr">Spend</div>
+        <div class="avb-col-hdr">Actual</div>
+        <div class="avb-col-hdr">Budget</div>
+        <div class="avb-col-hdr">Variance</div>
+      </div>
+      ${rows_html}
+      <div class="avb-summary">
+        <div class="avb-summary-item">
+          <div class="avb-summary-label">Total Spent</div>
+          <div class="avb-summary-val" style="color:var(--red);">−${fmt(totalActual)}</div>
+        </div>
+        <div class="avb-summary-item">
+          <div class="avb-summary-label">Total Budget</div>
+          <div class="avb-summary-val">${fmt(totalBudget)}</div>
+        </div>
+        <div class="avb-summary-item">
+          <div class="avb-summary-label">Variance</div>
+          <div class="avb-summary-val ${totalVClass}">${totalVLabel}</div>
+        </div>
+        <div class="avb-summary-item">
+          <div class="avb-summary-label">Transactions</div>
+          <div class="avb-summary-val">${rows.length}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
 const BUILTIN_CATEGORIES = ['Bills','Subscriptions','Food','Groceries','Transport','Insurance','Health','Shopping','Savings','Other'];
 let customCategories = [];
 
@@ -6778,8 +7211,7 @@ async function bootApp(allData) {
     });
   }
 
-  // Restore inputs for the initial view before renderAll() runs,
-  // so recalcMortgage() can't overwrite saved data with empty-input zeros.
+  // Restore inputs for the initial view before renderAll() runs
   if (currentView === 'mortgage') restoreMortgageInputs();
 
   hideLoader();
