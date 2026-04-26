@@ -1405,6 +1405,108 @@
     color: var(--text);
   }
 
+  /* ACTUALS GROUPED TABLE VIEW */
+  .actuals-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 0 14px;
+    flex-wrap: wrap;
+  }
+  .actuals-filter-input {
+    flex: 1;
+    min-width: 140px;
+    padding: 6px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    outline: none;
+  }
+  .actuals-filter-input:focus { border-color: var(--amber); background: var(--surface); }
+  .actuals-filter-sel {
+    padding: 6px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    outline: none;
+    cursor: pointer;
+  }
+  .actuals-filter-toggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--surface2);
+    user-select: none;
+  }
+  .actuals-filter-toggle.active { color: var(--amber); border-color: var(--amber); background: var(--amber-glow); }
+  .actuals-date-group { margin-bottom: 10px; border: 1px solid var(--border); background: var(--surface); overflow: hidden; }
+  .actuals-date-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .actuals-date-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .actuals-date-total { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--red); }
+  .actuals-row-view { cursor: pointer; transition: background 0.1s; }
+  .actuals-row-view:hover td { background: var(--amber-glow) !important; }
+  .actuals-row-edit td { background: var(--surface2) !important; padding: 6px 10px !important; }
+  .actuals-cat-badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 2px 6px;
+    border-radius: 2px;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .actuals-inline-edit {
+    display: grid;
+    grid-template-columns: 140px 1fr 130px 90px 80px auto;
+    gap: 6px;
+    align-items: center;
+    padding: 2px 0;
+  }
+  .actuals-summary-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 0 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .actuals-summary-item { font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
+  .actuals-summary-item strong { color: var(--text); font-size: 13px; }
+  .actuals-empty { font-family: var(--mono); font-size: 11px; color: var(--text-muted); padding: 20px 0; }
+
   /* ACTUALS DASHBOARD CHART */
   .actuals-chart-area {
     padding: 20px 24px 16px;
@@ -2135,7 +2237,7 @@
           </div>
         </div>
         <div id="actualsChartArea" style="display:none;padding:20px 24px 16px;">
-          <div class="chart-title" style="margin-bottom:14px;">Actuals — Cumulative Spend</div>
+          <div class="chart-title" style="margin-bottom:14px;">Actuals — Monthly Spend by Day</div>
           <div style="position:relative;height:180px;">
             <canvas id="actualsChart"></canvas>
           </div>
@@ -2595,18 +2697,18 @@
       <div class="actuals-layout">
         <div class="actuals-toolbar">
           <div style="font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);">Month</div>
-          <select class="form-select" id="actuals-month-sel" style="width:140px;padding:6px 10px;font-size:11px;" onchange="pendingActualRows=[];renderActualsEditor()"></select>
-          <select class="form-select" id="actuals-year-sel" style="width:90px;padding:6px 10px;font-size:11px;" onchange="pendingActualRows=[];renderActualsEditor()"></select>
+          <select class="form-select" id="actuals-month-sel" style="width:140px;padding:6px 10px;font-size:11px;" onchange="pendingActualRows=[];editingActualRowId=null;actualsFilterSearch='';actualsFilterCat='';renderActualsEditor()"></select>
+          <select class="form-select" id="actuals-year-sel" style="width:90px;padding:6px 10px;font-size:11px;" onchange="pendingActualRows=[];editingActualRowId=null;actualsFilterSearch='';actualsFilterCat='';renderActualsEditor()"></select>
           <div style="flex:1;"></div>
           <input type="file" id="excel-import-input" accept=".xlsx,.xls" style="display:none;" onchange="handleExcelFile(event)" />
           <button class="btn btn-ghost" style="font-size:10px;" onclick="document.getElementById('excel-import-input').click()">↑ Import Excel</button>
+          <button class="btn btn-ghost" style="font-size:10px;" title="Re-run auto-categorisation on current month's transactions" onclick="recategoriseActuals()">↻ Re-categorise</button>
           <button class="btn btn-ghost" style="font-size:10px;" onclick="addActualRow()">+ Add Line</button>
           <button class="btn btn-primary" style="font-size:10px;" onclick="saveActualsMonth()">Save Month</button>
         </div>
         <div class="actuals-body">
           <!-- Live entry editor -->
           <div id="actuals-editor">
-            <div style="font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;">Add transactions for the selected month</div>
             <div id="actuals-rows"></div>
           </div>
           <!-- Saved months list -->
@@ -4255,8 +4357,13 @@ function renderChart() {
     });
   }
 
-  // ── Actuals cumulative spend line ──
-  // Build per-day actual spend from all saved actualsData
+  // ── Actuals balance line ──
+  // Reconstructs estimated current-account balance for past days using actual spend.
+  // Method: start from adjustedSeedCurrent (known balance at start of today),
+  // walk backward through history adding back each day's actual spend,
+  // and use scheduled income (salary) since we know those dates.
+  // This produces a line on the same scale as the grey projected-balance line
+  // that naturally tracks toward the amber actual-balance dots.
   const _dailyActuals = {};
   Object.values(actualsData).forEach(md => {
     if (!md.rows) return;
@@ -4265,34 +4372,51 @@ function renderChart() {
       if (amt > 0) _dailyActuals[r.date] = (_dailyActuals[r.date] || 0) + amt;
     });
   });
-  const _todayStr = new Date().toISOString().slice(0,10);
-  let _cumActual = 0;
-  let _hasActualData = false;
-  const actualsLine = allLabels.map(k => {
-    const iso = new Date(k).toISOString().slice(0,10);
-    if (iso > _todayStr) return null; // stop at today
-    if (_dailyActuals[iso] !== undefined) {
-      _cumActual += _dailyActuals[iso];
-      _hasActualData = true;
-    }
-    return _hasActualData ? _cumActual : null;
-  });
+  const _hasActualData = Object.keys(_dailyActuals).length > 0;
   if (_hasActualData) {
-    datasets.push({
-      label: 'Actual Spend (cumulative)',
-      data: actualsLine,
-      type: 'line',
-      borderColor: '#c0392b',
-      backgroundColor: 'rgba(192,57,43,0.06)',
-      borderWidth: 2.5,
-      pointRadius: 0,
-      pointHoverRadius: 4,
-      fill: false,
-      tension: 0.3,
-      yAxisID: 'y2',
-      order: 0,
-      spanGaps: true,
-    });
+    const actualsLine = new Array(allLabels.length).fill(null);
+    if (hasBalances) {
+      // Walk backward from today's seed balance:
+      // balance[day] = balance[day+1] + actual_spend[day] - scheduled_income[day]
+      // (undoing each day's net flow going backward)
+      let runBal = adjustedSeedCurrent;
+      for (let i = todayIdx - 1; i >= 0; i--) {
+        const iso = new Date(allLabels[i]).toISOString().slice(0, 10);
+        const actualSpend  = _dailyActuals[iso]  || 0;
+        const schedIncome  = allIncomeData[i]     || 0;
+        actualsLine[i] = runBal;
+        runBal -= (schedIncome - actualSpend); // undo this day's net flow
+      }
+    } else {
+      // No balance anchor — show daily actual spend as a bar-style indicator on y (left axis)
+      // Fall back to cumulative so it's still meaningful
+      let cum = 0;
+      const _todayStr = new Date().toISOString().slice(0,10);
+      for (let i = 0; i < allLabels.length; i++) {
+        const iso = new Date(allLabels[i]).toISOString().slice(0,10);
+        if (iso > _todayStr) break;
+        cum += _dailyActuals[iso] || 0;
+        if (cum > 0) actualsLine[i] = cum;
+      }
+    }
+    if (actualsLine.some(v => v !== null)) {
+      datasets.push({
+        label: hasBalances ? 'Actual Balance (est.)' : 'Actual Spend (cumul.)',
+        data: actualsLine,
+        type: 'line',
+        borderColor: '#c0392b',
+        backgroundColor: 'rgba(192,57,43,0.06)',
+        borderWidth: 2,
+        borderDash: [5, 3],
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        fill: false,
+        tension: 0.3,
+        yAxisID: 'y2',
+        order: 0,
+        spanGaps: true,
+      });
+    }
   }
 
   chartInstance = new Chart(ctx, {
@@ -4706,6 +4830,10 @@ function renderPieChart() {
 let actualsData = {};
 let actualsChartInstance = null;
 let pendingActualRows = []; // unsaved rows in editor
+let editingActualRowId = null; // id of row currently in inline-edit mode
+let actualsFilterSearch = '';
+let actualsFilterCat = '';
+let actualsHideSavings = false;
 
 function loadActuals(data) {
   try {
@@ -4738,19 +4866,22 @@ function initActualsToolbar() {
 function addActualRow(prefill={}) {
   const today = new Date().toISOString().slice(0,10);
   const cats = getCategoryOrder();
+  const id = Math.random().toString(36).slice(2,10);
   pendingActualRows.push({
-    id: Math.random().toString(36).slice(2,10),
+    id,
     date: prefill.date || today,
     name: prefill.name || '',
     category: prefill.category || cats[0],
     owner: prefill.owner || 'joint',
     amount: prefill.amount || '',
   });
+  editingActualRowId = id;
   renderActualsEditor();
 }
 
 function removeActualRow(id) {
   pendingActualRows = pendingActualRows.filter(r => r.id !== id);
+  if (editingActualRowId === id) editingActualRowId = null;
   renderActualsEditor();
 }
 
@@ -4760,7 +4891,7 @@ function renderActualsEditor() {
 
   const saved = actualsData[key];
 
-  // Load saved rows into pending if pending is empty (i.e. freshly navigated to this month)
+  // Load saved rows into pending if pending is empty
   if (pendingActualRows.length === 0 && saved && saved.rows && saved.rows.length > 0) {
     pendingActualRows = saved.rows.map(r => ({...r}));
   }
@@ -4770,58 +4901,187 @@ function renderActualsEditor() {
   if (!rowsEl) return;
 
   if (pendingActualRows.length === 0) {
-    rowsEl.innerHTML = `<div style="font-family:var(--mono);font-size:11px;color:var(--text-muted);padding:10px 0;">No transactions yet. Click "+ Add Line" to start.</div>`;
-  } else {
-    rowsEl.innerHTML = pendingActualRows.map((row,idx) => `
-      <div class="actuals-input-row" id="arow-${row.id}">
-        <div>
-          <div class="actuals-field-label">Date</div>
-          <input class="form-input" type="date" value="${row.date}" onchange="updateActualRow('${row.id}','date',this.value)" style="font-size:11px;padding:6px 10px;" />
-        </div>
-        <div>
-          <div class="actuals-field-label">Description</div>
-          <input class="form-input" type="text" value="${row.name}" placeholder="e.g. Tesco" onchange="updateActualRow('${row.id}','name',this.value)" style="font-size:11px;padding:6px 10px;" />
-        </div>
-        <div>
-          <div class="actuals-field-label">Category</div>
-          <select class="form-select actuals-cat-sel" onchange="updateActualRow('${row.id}','category',this.value)" style="font-size:11px;padding:6px 10px;">
-            ${cats.map(c => `<option value="${c}"${c===row.category?' selected':''}>${c}</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <div class="actuals-field-label">Amount (£)</div>
-          <input class="form-input" type="number" min="0" step="0.01" value="${row.amount}" placeholder="0.00" onchange="updateActualRow('${row.id}','amount',this.value)" style="font-size:11px;padding:6px 10px;" />
-        </div>
-        <div>
-          <div class="actuals-field-label">Owner</div>
-          <select class="form-select" onchange="updateActualRow('${row.id}','owner',this.value)" style="font-size:11px;padding:6px 10px;">
-            <option value="joint"${row.owner==='joint'?' selected':''}>Joint</option>
-            <option value="ash"${row.owner==='ash'?' selected':''}>Ash</option>
-            <option value="henry"${row.owner==='henry'?' selected':''}>Henry</option>
-          </select>
-        </div>
-        <button onclick="removeActualRow('${row.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;padding:0 4px;align-self:flex-end;margin-bottom:2px;" title="Remove">✕</button>
-      </div>`).join('');
+    rowsEl.innerHTML = `<div class="actuals-empty">No transactions yet. Click "+ Add Line" to add one, or use "↑ Import Excel" to bulk import from your bank statement.</div>`;
+    renderActualsSavedList();
+    return;
   }
 
-  // Show total of pending rows
-  const total = pendingActualRows.reduce((s,r) => s + (parseFloat(r.amount)||0), 0);
-  const existing = document.getElementById('actuals-pending-total');
-  if (existing) existing.remove();
-  if (pendingActualRows.length > 0) {
-    const div = document.createElement('div');
-    div.id = 'actuals-pending-total';
-    div.style.cssText = 'font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-top:8px;text-align:right;';
-    div.innerHTML = `${pendingActualRows.length} transaction${pendingActualRows.length!==1?'s':''} · <strong style="color:var(--red);">−${fmt(total)}</strong> total`;
-    rowsEl.after(div);
+  // ── Filter bar ──
+  const catOptions = ['', ...cats].map(c => `<option value="${c}"${c===actualsFilterCat?' selected':''}>${c||'All categories'}</option>`).join('');
+  const filterBar = `
+    <div class="actuals-filter-bar">
+      <input class="actuals-filter-input" type="search" placeholder="Search description…" value="${actualsFilterSearch.replace(/"/g,'&quot;')}"
+        oninput="actualsFilterSearch=this.value;renderActualsEditor()" />
+      <select class="actuals-filter-sel" onchange="actualsFilterCat=this.value;renderActualsEditor()">${catOptions}</select>
+      <div class="actuals-filter-toggle${actualsHideSavings?' active':''}" onclick="actualsHideSavings=!actualsHideSavings;renderActualsEditor()" title="Hide savings & transfers">
+        ${actualsHideSavings?'✓ ':''}Hide Savings
+      </div>
+    </div>`;
+
+  // ── Apply filters ──
+  let visibleRows = pendingActualRows;
+  if (actualsFilterSearch) {
+    const q = actualsFilterSearch.toLowerCase();
+    visibleRows = visibleRows.filter(r => (r.name||'').toLowerCase().includes(q));
   }
+  if (actualsFilterCat) visibleRows = visibleRows.filter(r => r.category === actualsFilterCat);
+  if (actualsHideSavings) visibleRows = visibleRows.filter(r => r.category !== 'Savings');
+
+  // ── Summary bar ──
+  const totalAll = pendingActualRows.reduce((s,r) => s + (parseFloat(r.amount)||0), 0);
+  const totalVisible = visibleRows.reduce((s,r) => s + (parseFloat(r.amount)||0), 0);
+  const isFiltered = visibleRows.length !== pendingActualRows.length;
+  const summaryBar = `
+    <div class="actuals-summary-bar">
+      <div class="actuals-summary-item"><strong>${pendingActualRows.length}</strong> transactions</div>
+      <div class="actuals-summary-item">Total: <strong style="color:var(--red);">−${fmt(totalAll)}</strong></div>
+      ${isFiltered ? `<div class="actuals-summary-item" style="color:var(--amber);">Showing ${visibleRows.length} · −${fmt(totalVisible)}</div>` : ''}
+    </div>`;
+
+  // ── Group by date ──
+  const byDate = {};
+  visibleRows.forEach(r => {
+    const d = r.date || '';
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(r);
+  });
+  const sortedDates = Object.keys(byDate).sort();
+
+  const groupsHtml = sortedDates.map(date => {
+    const dayRows = byDate[date];
+    const dayTotal = dayRows.reduce((s,r) => s+(parseFloat(r.amount)||0), 0);
+    const dayLabel = date ? formatActualsDate(date) : 'Unknown date';
+
+    const rowsHtml = dayRows.map(row => {
+      if (editingActualRowId === row.id) {
+        return `<tr class="actuals-row-edit" id="arow-${row.id}">
+          <td colspan="5" style="padding:8px 10px;">
+            <div class="actuals-inline-edit">
+              <input class="form-input" type="date" value="${row.date}" onchange="updateActualRow('${row.id}','date',this.value)" style="font-size:11px;padding:5px 8px;" />
+              <input class="form-input" type="text" value="${(row.name||'').replace(/"/g,'&quot;')}" placeholder="Description" oninput="updateActualRow('${row.id}','name',this.value)" style="font-size:11px;padding:5px 8px;" />
+              <select class="form-select actuals-cat-sel" onchange="updateActualRow('${row.id}','category',this.value)" style="font-size:11px;padding:5px 8px;">
+                ${cats.map(c => `<option value="${c}"${c===row.category?' selected':''}>${c}</option>`).join('')}
+              </select>
+              <input class="form-input" type="number" min="0" step="0.01" value="${row.amount}" onchange="updateActualRow('${row.id}','amount',this.value)" style="font-size:11px;padding:5px 8px;" />
+              <select class="form-select" onchange="updateActualRow('${row.id}','owner',this.value)" style="font-size:11px;padding:5px 8px;">
+                <option value="joint"${row.owner==='joint'?' selected':''}>Joint</option>
+                <option value="ash"${row.owner==='ash'?' selected':''}>Ash</option>
+                <option value="henry"${row.owner==='henry'?' selected':''}>Henry</option>
+              </select>
+              <div style="display:flex;gap:4px;">
+                <button onclick="commitEditActualRow('${row.id}')" style="background:var(--amber);border:none;color:#fff;cursor:pointer;padding:5px 10px;font-family:var(--mono);font-size:10px;font-weight:600;" title="Save">✓</button>
+                <button onclick="cancelEditActualRow()" style="background:none;border:1px solid var(--border2);color:var(--text-muted);cursor:pointer;padding:5px 10px;font-family:var(--mono);font-size:10px;" title="Cancel">✕</button>
+              </div>
+            </div>
+          </td>
+        </tr>`;
+      }
+      const catColor = getCatColor(row.category);
+      return `<tr class="actuals-row-view" id="arow-${row.id}" onclick="startEditActualRow('${row.id}')">
+        <td style="color:var(--text);font-weight:500;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(row.name||'').replace(/"/g,'&quot;')}">${row.name||'—'}</td>
+        <td><span class="actuals-cat-badge" style="border-color:${catColor}20;background:${catColor}12;color:${catColor};">${row.category||'Other'}</span></td>
+        <td style="text-align:right;color:var(--red);font-weight:600;">−${fmt(parseFloat(row.amount)||0)}</td>
+        <td style="color:var(--text-muted);font-size:10px;text-align:center;">${row.owner||'joint'}</td>
+        <td style="text-align:right;padding-right:8px;">
+          <button onclick="event.stopPropagation();removeActualRow('${row.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;padding:2px 5px;opacity:0.6;" title="Delete">✕</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    return `<div class="actuals-date-group">
+      <div class="actuals-date-header">
+        <span class="actuals-date-label">${dayLabel}</span>
+        <span class="actuals-date-total">${dayRows.length} · −${fmt(dayTotal)}</span>
+      </div>
+      <table class="actuals-entry-table" style="table-layout:fixed;width:100%;">
+        <colgroup>
+          <col style="width:40%;min-width:120px;">
+          <col style="width:22%;">
+          <col style="width:16%;min-width:80px;">
+          <col style="width:10%;">
+          <col style="width:5%;min-width:36px;">
+        </colgroup>
+        ${rowsHtml}
+      </table>
+    </div>`;
+  }).join('');
+
+  rowsEl.innerHTML = filterBar + summaryBar + (groupsHtml || `<div class="actuals-empty">No transactions match the current filter.</div>`);
 
   renderActualsSavedList();
+}
+
+// Helper: format ISO date as "Mon 24 Apr 2026"
+function formatActualsDate(iso) {
+  try {
+    const d = new Date(iso + 'T12:00:00');
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    return `${days[d.getDay()]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
+  } catch { return iso; }
+}
+
+function startEditActualRow(id) {
+  editingActualRowId = id;
+  renderActualsEditor();
+  // Scroll the edit row into view
+  setTimeout(() => {
+    const el = document.getElementById('arow-' + id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
+}
+
+function commitEditActualRow(id) {
+  editingActualRowId = null;
+  renderActualsEditor();
+}
+
+function cancelEditActualRow() {
+  // If the row being cancelled is a new empty row, remove it
+  if (editingActualRowId) {
+    const row = pendingActualRows.find(r => r.id === editingActualRowId);
+    if (row && !row.name && !row.amount) {
+      pendingActualRows = pendingActualRows.filter(r => r.id !== editingActualRowId);
+    }
+  }
+  editingActualRowId = null;
+  renderActualsEditor();
 }
 
 function updateActualRow(id, field, value) {
   const row = pendingActualRows.find(r => r.id === id);
   if (row) row[field] = field === 'amount' ? (parseFloat(value)||0) : value;
+}
+
+// Re-run auto-categorisation on every row in the current month
+// Useful after an import where categories were wrong
+function recategoriseActuals() {
+  if (pendingActualRows.length === 0) { alert('No transactions loaded for the current month.'); return; }
+  const changed = [];
+  pendingActualRows.forEach(r => {
+    const newCat = autoCategory(r.name, ''); // keywords only, ignore bank category
+    if (newCat !== r.category) {
+      changed.push(`${r.name}: ${r.category} → ${newCat}`);
+      r.category = newCat;
+    }
+  });
+  editingActualRowId = null;
+  renderActualsEditor();
+  if (changed.length === 0) {
+    alert('All categories already look correct — nothing changed.');
+  } else {
+    // Brief summary
+    const preview = changed.slice(0, 8).join('\n');
+    const more = changed.length > 8 ? `\n…and ${changed.length - 8} more` : '';
+    if (confirm(`Re-categorised ${changed.length} transaction${changed.length!==1?'s':''}:\n\n${preview}${more}\n\nClick OK to keep these changes, or Cancel to revert.`)) {
+      // Changes already applied to pendingActualRows — nothing more to do
+    } else {
+      // Revert by reloading from saved data
+      const key = getActualsMonthKey();
+      const saved = actualsData[key];
+      pendingActualRows = saved && saved.rows ? saved.rows.map(r => ({...r})) : [];
+      renderActualsEditor();
+    }
+  }
 }
 
 function saveActualsMonth() {
@@ -4832,6 +5092,7 @@ function saveActualsMonth() {
   actualsData[key] = { saved: true, rows };
   saveActualsData();
   pendingActualRows = [];
+  editingActualRowId = null;
   renderActualsEditor();
   renderActualsDashChart();
   renderChart(); // refresh dashboard actuals line
@@ -4859,7 +5120,12 @@ function editActualsMonth(key) {
   if (mSel) mSel.value = mo - 1;
   if (ySel) ySel.value = yr;
   pendingActualRows = actualsData[key].rows.map(r => ({...r}));
+  editingActualRowId = null;
+  actualsFilterSearch = '';
+  actualsFilterCat = '';
   renderActualsEditor();
+  // Scroll to editor
+  setTimeout(() => { const el = document.getElementById('actuals-editor'); if (el) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 80);
 }
 
 function renderActualsSavedList() {
@@ -5011,12 +5277,38 @@ function renderActualsDashChart() {
 // ─────────────────────────────────────────
 
 // Keyword map: category -> array of patterns to look for in description
+// NOTE: 'Car' and 'Mortgage' are checked first; if the user has renamed them,
+// the fallback map in autoCategory handles the redirect.
 const CAT_KEYWORDS = {
+  Mortgage: [
+    'mortgage','mortg ','home loan','mortgage payment',
+    'nationwide mortgage','barclays mortgage','halifax mortgage','lloyds mortgage',
+    'hsbc mortgage','santander mortgage','natwest mortgage','virgin money mortgage',
+    'yorkshire building society','leeds building','skipton building','coventry building',
+    'west bromwich building','nottingham building','principality building',
+    'cheltenham & gloucester','fleet mortgages','accord mortgages','platform home loans'
+  ],
+  Car: [
+    'fuel','petrol','diesel','shell','bp oil','bp ','texaco','esso','gulf','jet petrol',
+    'repsol','morrisons fuel','asda fuel','tesco fuel','sainsburys fuel',
+    'halfords','kwik fit','national tyres','formula one autocentres',
+    'mot ','tyres','tyre','car wash','dvla ','dvla.gov','vehicle tax',
+    'aa ','rac ','green flag','motability',
+    'ford ','vauxhall','toyota','volkswagen','bmw ','audi ','mercedes','honda ',
+    'peugeot','renault','kia ','hyundai','seat ','skoda','volvo','nissan '
+  ],
+  Transport: [
+    'parking','car park','ncp ','q-park','ringgo','justpark','paybyphone',
+    'train','rail','gwr','lner','avanti','thameslink','southeastern','southern rail',
+    'national rail','trainline','bus ','stagecoach','arriva','first bus','tfl ','oyster',
+    'uber','lyft','taxi','bolt ride','addison lee','black cab',
+    'toll','m6 toll','dartford crossing'
+  ],
   Groceries: [
     'sainsbury','tesco','lidl','asda','morrisons','morrison','waitrose','aldi','coop','co-op',
     'co op','ocado','marks food','m&s food','marks & spencer food','iceland','farmfoods',
     'whole foods','wholefood','booths','budgens','spar','londis','nisa','premier stores',
-    'symbol group','jacks','morrisons','costco food'
+    'symbol group','jacks','costco food'
   ],
   Food: [
     'cafe','restaurant','pizza','burger','kfc','mcdonald','nandos','nando','subway','costa',
@@ -5026,15 +5318,6 @@ const CAT_KEYWORDS = {
     'indian','thai','mexican','tapas','kebab','chippy','fish chips','pub food',
     'hungry horse','mitchells butler','wetherspoon','spoons','harvester','frankie',
     'gecko','gorge','gorge somerset','lazy gecko'
-  ],
-  Transport: [
-    'fuel','petrol','shell','bp oil','texaco','esso','gulf','jet petrol','repsol',
-    'parking','car park','ncp ','q-park','ringgo','justpark','paybyphone',
-    'train','rail','gwr','lner','avanti','thameslink','southeastern','southern rail',
-    'national rail','trainline','bus','stagecoach','arriva','first bus','tfl','oyster',
-    'uber','lyft','taxi','bolt ride','addison lee','black cab','auto','halfords',
-    'kwik fit','mot ','tyres','tyre','car wash','toll','m6 toll','dartford','dvla',
-    'aa ','rac ','green flag','motability','ford','vauxhall','toyota','bmw','audi'
   ],
   Bills: [
     'council tax','electricity','electric','edf','british gas','octopus energy','ovo energy',
@@ -5082,16 +5365,30 @@ const CAT_KEYWORDS = {
   ],
 };
 
+// If a keyword maps to a category the user hasn't created, fall back to this
+const CAT_KEYWORD_FALLBACKS = { Car: 'Transport', Mortgage: 'Bills' };
+
 function autoCategory(description, existingCat) {
+  const desc = (description || '').toLowerCase();
+  const validCats = getCategoryOrder();
+
+  // 1. Keywords take priority — more reliable than bank-assigned categories
+  for (const [cat, keywords] of Object.entries(CAT_KEYWORDS)) {
+    if (keywords.some(kw => desc.includes(kw))) {
+      if (validCats.includes(cat)) return cat;
+      // keyword category not in user's list — try fallback
+      const fb = CAT_KEYWORD_FALLBACKS[cat];
+      if (fb && validCats.includes(fb)) return fb;
+      // still not found — keep looking in case another keyword matches
+    }
+  }
+
+  // 2. Fall back to bank's own category column if no keyword matched
   if (existingCat && existingCat.trim() && existingCat.trim().toLowerCase() !== 'none') {
     const titleCase = existingCat.trim().charAt(0).toUpperCase() + existingCat.trim().slice(1).toLowerCase();
-    const cats = getCategoryOrder();
-    if (cats.includes(titleCase)) return titleCase;
+    if (validCats.includes(titleCase)) return titleCase;
   }
-  const desc = (description || '').toLowerCase();
-  for (const [cat, keywords] of Object.entries(CAT_KEYWORDS)) {
-    if (keywords.some(kw => desc.includes(kw))) return cat;
-  }
+
   return 'Other';
 }
 
@@ -5109,9 +5406,17 @@ function handleExcelFile(event) {
       const sheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
 
+      // Ask whether to exclude savings/transfers before processing
+      const excludeSavings = confirm(
+        'Exclude savings & transfer transactions from this import?\n\n' +
+        'Choose OK to skip rows categorised as "Savings" (recommended — avoids inflating your spend totals with account transfers).\n' +
+        'Choose Cancel to import everything.'
+      );
+
       // Parse ALL outgoing transactions and group by YYYY-MM
       const byMonth = {}; // { 'YYYY-MM': [{...}, ...] }
       let skipped = 0;
+      let savingsSkipped = 0;
       for (const row of rows) {
         let dateVal = row['Date'] || row['date'] || null;
         let dateObj = null;
@@ -5139,6 +5444,11 @@ function handleExcelFile(event) {
         const dateStr = dateObj.toISOString().slice(0,10);
         const key = dateStr.slice(0,7); // YYYY-MM
         const cat = autoCategory(description, existingCat);
+
+        // Skip savings/transfers if user opted out
+        if (excludeSavings && cat === 'Savings') { savingsSkipped++; continue; }
+        // Also skip if it looks like a savings transfer even without keyword match
+        if (excludeSavings && (description.toLowerCase().includes('transfer') || description.toLowerCase().includes('savings'))) { savingsSkipped++; continue; }
 
         if (!byMonth[key]) byMonth[key] = [];
         byMonth[key].push({
@@ -5202,7 +5512,8 @@ function handleExcelFile(event) {
       const banner = document.createElement('div');
       banner.id = 'actuals-import-banner';
       banner.className = 'actuals-import-banner';
-      banner.innerHTML = `✓ Imported <strong>${totalImported}</strong> transactions across <strong>${monthKeys.length}</strong> month${monthKeys.length !== 1 ? 's' : ''} and saved automatically${skipped > 0 ? ` (${skipped} rows skipped)` : ''}.<br><span style="font-size:10px;opacity:0.8;">${monthSummary}</span>`;
+      const skipNote = [skipped > 0 ? `${skipped} invalid` : '', savingsSkipped > 0 ? `${savingsSkipped} savings/transfers` : ''].filter(Boolean);
+      banner.innerHTML = `✓ Imported <strong>${totalImported}</strong> transactions across <strong>${monthKeys.length}</strong> month${monthKeys.length !== 1 ? 's' : ''} and saved automatically${skipNote.length ? ` (skipped: ${skipNote.join(', ')})` : ''}.<br><span style="font-size:10px;opacity:0.8;">${monthSummary}</span>`;
       editor.prepend(banner);
 
     } catch (err) {
