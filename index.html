@@ -2189,6 +2189,7 @@
     <button class="nav-btn" onclick="switchView('savings')">Savings</button>
     <button class="nav-btn" onclick="switchView('actuals')">Actuals</button>
     <button class="nav-btn" onclick="switchView('insights')">✦ Insights</button>
+    <button class="nav-btn" onclick="exportAllData()" title="Download all your data as a JSON file — use this to migrate to the offline app" style="border-color:var(--amber);color:var(--amber);opacity:0.8;">⬇ Export Data</button>
   </div>
 </header>
 
@@ -4711,6 +4712,52 @@ function exportChartCSV() {
   const a    = document.createElement('a');
   a.href     = url;
   a.download = `ledger-export-${today}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────────
+// EXPORT ALL DATA (for migrating to offline app)
+// ─────────────────────────────────────────
+async function exportAllData() {
+  let data = null;
+
+  // Prefer fetching from the cloud (always freshest)
+  try {
+    const r = await fetch(API_BASE, {
+      signal: AbortSignal.timeout(8000),
+      headers: authHeaders(),
+    });
+    if (r.ok) data = await r.json();
+  } catch {}
+
+  // Fallback: collect from localStorage cache
+  if (!data) {
+    const KEYS = [
+      'ledger-entries','ledger-salaries','ledger-mortgage','ledger-balances',
+      'ledger-savings-config','ledger-actuals','ledger-custom-cats',
+      'ledger-cat-renames','ledger-cat-colors'
+    ];
+    data = {};
+    KEYS.forEach(key => {
+      try {
+        const s = localStorage.getItem(key);
+        if (s) data[key] = JSON.parse(s);
+      } catch {}
+    });
+  }
+
+  data['_exported_at'] = new Date().toISOString();
+  data['_version'] = 1;
+
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `ledger-data-${new Date().toISOString().slice(0,10)}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
